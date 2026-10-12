@@ -114,6 +114,8 @@ const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\
 function allNamedSpecifiersAreTypeOnly(clause = '') {
   const m = clause.match(/\{([\s\S]*?)\}/);
   if (!m) return false;
+  const beforeBrace = stripComments(clause.slice(0, m.index)).replace(/[\s,]/g, '');
+  if (beforeBrace.length > 0) return false;
   const specs = stripComments(m[1]).split(',').map((s) => s.trim()).filter(Boolean);
   return specs.length > 0 && specs.every((s) => /^type\s+[$\w]+(?:\s+as\s+[$\w]+)?$/.test(s));
 }
