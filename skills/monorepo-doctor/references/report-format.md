@@ -93,6 +93,9 @@ const report = {
 };
 fs.writeFileSync(path.join(outDir, 'monorepo-doctor-report.json'), JSON.stringify(report, null, 2) + '\n');
 const cell = (v) => safe(v).replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+const heading = (v) => safe(v).replace(/\s*\r?\n\s*/g, ' ');
+// Escape emphasis chars outside code spans so globs like **/*.spec.ts render verbatim.
+const inline = (v) => safe(v).split(/(`+[^`]*`+)/).map((p, i) => i % 2 ? p : p.replace(/[\\*_]/g, '\\$&')).join('');
 const loc = (l) => l?.file ? `\`${l.file}${l.line ? `:${l.line}` : ''}\`${l.package ? ` (${l.package})` : ''}` : '—';
 const fenceFor = (s) => '`'.repeat(Math.max(3, ...[...safe(s).matchAll(/`+/g)].map((m) => m[0].length + 1)));
 const md = [
@@ -108,7 +111,9 @@ for (const s of SEV) {
   md.push(`## ${s[0].toUpperCase() + s.slice(1)}`, '');
   for (const f of fs_) {
     const fence = fenceFor(f.evidence);
-    md.push(`### ${cell(f.title)}`, '', `- **id:** ${f.id ? `\`${f.id}\`` : '—'}`, `- **where:** ${loc(f.location)}`, '', '**Evidence**', '', fence, safe(f.evidence), fence, '', `**Fix:** ${safe(f.fix) || '—'}`, '');
+    const fix = safe(f.fix);
+    const fixLines = /\r?\n/.test(fix) ? ['**Fix**', '', fenceFor(fix), fix, fenceFor(fix)] : [`**Fix:** ${inline(fix) || '—'}`];
+    md.push(`### ${heading(f.title)}`, '', `- **id:** ${f.id ? `\`${f.id}\`` : '—'}`, `- **where:** ${loc(f.location)}`, '', '**Evidence**', '', fence, safe(f.evidence), fence, '', ...fixLines, '');
   }
 }
 if (!findings.length) md.push('No findings. 🎉', '');
