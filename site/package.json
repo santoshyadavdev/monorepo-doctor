@@ -20,5 +20,8 @@
   "private": true,
   "devDependencies": {
     "wrangler": "^4.151.3"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }
