@@ -59,15 +59,16 @@ that adds a reverse dependency or disables the check makes the count worse.
   two files is two violations.
 - If no baseline file exists, create one in its own first PR so CI fails only
   on *new* violations. Use the tool's native mechanism where it exists (ESLint
-  bulk suppressions, dependency-cruiser `--ignore-known`, Bazel visibility
-  allowlists). Otherwise (e.g. `turbo boundaries`) add a small script that
-  diffs the linter output against a checked-in, sorted list and fails on new
-  entries.
+  bulk suppressions, dependency-cruiser `--ignore-known`). Otherwise (e.g.
+  `turbo boundaries`, Bazel) add a small script that diffs the linter output
+  against a checked-in, sorted list and fails on new entries. Never record a
+  violation by widening access (Bazel `visibility`/`package_group`, Nx tag
+  constraints, boundary allow rules): that makes it legal, not baselined.
 
 ### 1. Plan one batch
 
 - Pick a cohesive group: one importer/target pair or one root cause. Aim for
-  about N unique violations (default 100–200), but keep each change
+  about 100–200 unique violations, but keep each change
   reviewable. Several tiny fixes of the same kind (e.g. deep imports → public
   entry) may share a batch; different kinds never do.
 - For each violation, choose the least invasive correct fix, in this order:
@@ -81,8 +82,10 @@ that adds a reverse dependency or disables the check makes the count worse.
        cases where an app owns code that others need. If only a value or a
        callback crosses the boundary, prefer step 5 instead.
     4. **Test through a contract:** in tests, replace imports from another
-       workspace with that workspace's CLI, a generated or checked-in JSON file,
-       or `git ls-files`.
+       workspace with that workspace's CLI, exported API, a generated or
+       checked-in JSON file, or a local fixture. `git ls-files` is only a
+       substitute for tests that assert file paths or checkout contents, never
+       for behavior tests.
     5. **Invert control:** let the caller pass a path or callback instead of the
        callee importing the caller.
     6. **Keep it in the baseline** only if a constraint blocks every fix. Examples:
@@ -116,7 +119,9 @@ that adds a reverse dependency or disables the check makes the count worse.
 
 ### 4. Open the PR
 
-- Branch from the latest upstream main.
+- Branch from the latest upstream default branch (resolve it, e.g.
+  `gh repo view --json defaultBranchRef`, or the PR's base branch; do not
+  assume `main`).
 - Fill in the repo's PR template in full: what moved and why, CI impact,
   validation commands with their results, and the violations still in the
   baseline.
@@ -127,8 +132,8 @@ that adds a reverse dependency or disables the check makes the count worse.
 - **CI failures:** find the first failing phase. Decide whether the failure is
   caused by this change, is a pre-existing flake, or is environmental. Fix the
   root cause; never weaken assertions or add retries.
-- **Conflicts:** rebase on main.
-    - For lockfiles and generated files, take main's version, then regenerate
+- **Conflicts:** rebase on the PR's base branch.
+    - For lockfiles and generated files, take the base branch's version, then regenerate
       them (run the package manager's install, or the regeneration script).
     - For source files, resolve conflicts one file at a time.
     - Then rerun the affected checks and push with `--force-with-lease`.
