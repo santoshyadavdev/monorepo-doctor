@@ -60,8 +60,10 @@ that adds a reverse dependency or disables the check makes the count worse.
 - If no baseline file exists, create one in its own first PR so CI fails only
   on *new* violations. Use the tool's native mechanism where it exists (ESLint
   bulk suppressions, dependency-cruiser `--ignore-known`). Otherwise (e.g.
-  `turbo boundaries`, Bazel) add a small script that diffs the linter output
-  against a checked-in, sorted list and fails on new entries. Never record a
+  `turbo boundaries`, Bazel) add a small script that canonicalizes each
+  finding to its unique (importing file, import specifier) key, sorts and
+  deduplicates the keys, diffs them against a checked-in list in the same
+  form, and fails only on keys not in the baseline. Never record a
   violation by widening access (Bazel `visibility`/`package_group`, Nx tag
   constraints, boundary allow rules): that makes it legal, not baselined.
 
