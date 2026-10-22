@@ -1,12 +1,21 @@
-# monorepo-doctor
+# Monorepo Skills
 
-An agent skill that audits JS/TS monorepos for the five problems teams keep missing.
+Agent skills that find — and then fix — the JS/TS monorepo problems teams keep missing.
+
+📖 **Docs: [monorepo-skills.dev](https://monorepo-skills.dev)** · 🤖 For agents: [`llms.txt`](https://monorepo-skills.dev/llms.txt) · [`llms-full.txt`](https://monorepo-skills.dev/llms-full.txt)
+
+| Skill | What it does |
+|---|---|
+| [`monorepo-doctor`](https://monorepo-skills.dev/skills/monorepo-doctor/) | Read-only audit: package boundaries, circular dependencies, task caching, CI test coverage, test code in production. Writes Markdown and JSON reports. |
+| [`monorepo-boundaries-cleanup`](https://monorepo-skills.dev/skills/monorepo-boundaries-cleanup/) | Refactoring workflow: pays boundary violations down in small PRs against a baseline, then stops for your CI report. |
+
+## monorepo-doctor
 
 `monorepo-doctor` is a read-only AI agent skill for npm, yarn, pnpm, and bun workspaces, with deeper rules for Nx and Turborepo. It guides an agent through deterministic detection, source scanning, five independent audits, and an evidence-backed Markdown and JSON report.
 
 Requires Node ≥ 22.5.
 
-This repo also ships a companion skill, [`monorepo-boundaries-cleanup`](skills/monorepo-boundaries-cleanup/SKILL.md). It is a refactoring workflow that pays down boundary violations found by monorepo-doctor or by a boundary linter such as `turbo boundaries`, Nx `enforce-module-boundaries`, or dependency-cruiser. It works in small PRs against a baseline: wrong-direction imports, deep imports, undeclared dependencies, cross-workspace test fixtures, and cycles. Unlike monorepo-doctor, it **edits code and opens PRs**, then stops and waits for your CI report.
+The companion skill [`monorepo-boundaries-cleanup`](skills/monorepo-boundaries-cleanup/SKILL.md) is a refactoring workflow that pays down boundary violations found by monorepo-doctor or by a boundary linter such as `turbo boundaries`, Nx `enforce-module-boundaries`, or dependency-cruiser. It works in small PRs against a baseline: wrong-direction imports, deep imports, undeclared dependencies, cross-workspace test fixtures, and cycles. Unlike monorepo-doctor, it **edits code and opens PRs**, then stops and waits for your CI report.
 
 ## What it checks
 
@@ -129,7 +138,7 @@ Without `node_modules`, dependency-resolution checks such as `knip` and `publint
 
 ## CI example
 
-This example runs the skill in a GitHub Actions job and uploads both reports. Replace the agent command with the non-interactive CLI for your environment. The threshold check must be a separate workflow step after the agent writes the report; an agent-internal threshold cannot fail the job reliably. The example does not install dependencies, so knip/Nx/Turbo sub-steps will be partial; for best coverage, run it after your normal dependency install step.
+See [Run in CI](https://monorepo-skills.dev/guides/ci/) on the docs site. This example runs the skill in a GitHub Actions job and uploads both reports. Replace the agent command with the non-interactive CLI for your environment. The threshold check must be a separate workflow step after the agent writes the report; an agent-internal threshold cannot fail the job reliably. The example does not install dependencies, so knip/Nx/Turbo sub-steps will be partial; for best coverage, run it after your normal dependency install step.
 
 ```yaml
 name: monorepo-doctor
@@ -210,8 +219,19 @@ Use `scripts/verify-fixture.mjs` to compare a generated report with an expected 
 node scripts/verify-fixture.mjs "$(node -p 'require("os").tmpdir()')/monorepo-doctor-reports/monorepo-doctor-report.json" fixtures/expected/generic-pnpm.json
 ```
 
-`npm run check` validates the skill frontmatter, reference links, and finding-id coverage. It should print:
+`npm run check` validates every skill's frontmatter, reference links, and (for monorepo-doctor) finding-id coverage. It should print:
 
 ```text
-✓ skill is consistent
+✓ monorepo-boundaries-cleanup is consistent
+✓ monorepo-doctor is consistent
 ```
+
+### Docs site
+
+The docs at [monorepo-skills.dev](https://monorepo-skills.dev) are an [Astro Starlight](https://starlight.astro.build) site in `site/`. Reference pages, `llms.txt`, and the raw `/skills/**` files are generated from `skills/`, so edit the skill files rather than generated pages.
+
+```bash
+cd site && npm ci && npm run dev
+```
+
+The site is deployed to Cloudflare Workers (static assets) by Workers Builds, configured in `site/wrangler.jsonc`. `.github/workflows/docs.yml` only runs a build check.
