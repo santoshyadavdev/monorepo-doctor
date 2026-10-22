@@ -32,7 +32,7 @@ Bring the violation count to zero over a series of small, reviewable PRs. Every 
 | 2. Implement | Surgical changes. New packages get build, typecheck, lint and test scripts and join the CI affected graph. Regenerate the baseline. |
 | 3. Verify | Linter, scoped typecheck/lint/format, tests of changed and dependent workspaces, CI meta-tests, version-consistency check. Compare failures against the base branch. |
 | 4. Open the PR | Fill the PR template: what moved and why, CI impact, validation results, what remains in the baseline. Then stop. |
-| 5. Feedback | Fix CI root causes (never weaken assertions or add retries). Rebase conflicts; regenerate lockfiles. |
+| 5. Feedback | Fix CI root causes (never weaken assertions or add retries). Rebase on the PR's base branch; regenerate lockfiles. |
 | 6. Repeat | Re-measure and plan the next batch until the baseline is empty, then make the linter strict. |
 
 ### Fix ladder
@@ -42,13 +42,17 @@ For each violation, use the first fix that's correct:
 1. **Declare a missing dependency** when the direction is allowed, at the version the repo already resolves.
 2. **Use the public entry point** instead of a deep import.
 3. **Extract a small package** for shared code — for cycles, or when an app owns code others need.
-4. **Test through a contract** — a CLI, a checked-in JSON file, or `git ls-files` instead of importing another workspace.
+4. **Test through a contract** — the other workspace's CLI, exported API, a checked-in JSON file, or a local fixture. `git ls-files` only replaces tests that assert file paths, never behavior tests.
 5. **Invert control** — the caller passes a path or callback. Prefer this over step 3 when only a value or callback crosses the boundary.
 6. **Keep it in the baseline**, with a documented reason, only when a constraint blocks every fix.
 
 ### Baselines
 
-Use the tool's native mechanism where one exists: ESLint bulk suppressions, dependency-cruiser `--ignore-known`, Bazel visibility allowlists. For tools without one, such as `turbo boundaries`, add a small script that diffs the linter output against a checked-in, sorted list and fails on new entries.
+Use the tool's native mechanism where one exists: ESLint bulk suppressions, dependency-cruiser `--ignore-known`. For tools without one, such as `turbo boundaries` or Bazel, add a small script that diffs the linter output against a checked-in, sorted list and fails on new entries.
+
+:::caution
+Never baseline a violation by widening access — Bazel `visibility`/`package_group`, Nx tag constraints, or boundary allow rules. That makes the dependency legal instead of tracking it.
+:::
 
 ## Example prompts
 
