@@ -49,8 +49,15 @@ export function checkSkill(skillDir, expectedDir) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const errors = checkSkill(path.join(root, 'skills', 'monorepo-doctor'), path.join(root, 'fixtures', 'expected'));
-  for (const e of errors) console.error(`✗ ${e}`);
-  if (errors.length) process.exit(1);
-  console.log('✓ skill is consistent');
+  const skillsDir = path.join(root, 'skills');
+  const skills = fs.readdirSync(skillsDir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name);
+  let failed = false;
+  for (const name of skills) {
+    const expected = name === 'monorepo-doctor' ? path.join(root, 'fixtures', 'expected') : undefined;
+    const errors = checkSkill(path.join(skillsDir, name), expected);
+    for (const e of errors) console.error(`✗ ${name}: ${e}`);
+    if (errors.length) failed = true;
+    else console.log(`✓ ${name} is consistent`);
+  }
+  if (failed) process.exit(1);
 }

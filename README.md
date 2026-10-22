@@ -6,6 +6,8 @@ An agent skill that audits JS/TS monorepos for the five problems teams keep miss
 
 Requires Node ≥ 22.5.
 
+This repo also ships a companion skill, [`monorepo-boundaries-cleanup`](skills/monorepo-boundaries-cleanup/SKILL.md). It is a refactoring workflow that pays down boundary violations found by monorepo-doctor or by a boundary linter such as `turbo boundaries`, Nx `enforce-module-boundaries`, or dependency-cruiser. It works in small PRs against a baseline: wrong-direction imports, deep imports, undeclared dependencies, cross-workspace test fixtures, and cycles. Unlike monorepo-doctor, it **edits code and opens PRs**, then stops and waits for your CI report.
+
 ## What it checks
 
 | Check | What it looks for | Example finding ids |
@@ -32,7 +34,9 @@ Install from the repository with:
 npx skills add santoshyadavdev/monorepo-doctor
 ```
 
-Manual installation is also supported. Copy `skills/monorepo-doctor` into one of these locations:
+The CLI lets you pick which skills to install. To install one directly, add `--skill monorepo-doctor` or `--skill monorepo-boundaries-cleanup`.
+
+Manual installation is also supported. Copy `skills/monorepo-doctor` (and/or `skills/monorepo-boundaries-cleanup`) into one of these locations:
 
 - `~/.claude/skills/` for Claude Code
 - `~/.copilot/skills/` for Copilot CLI
@@ -50,6 +54,12 @@ Scope the audit when you only need specific checks:
 
 ```text
 Audit only caching and CI coverage with monorepo-doctor.
+```
+
+Pay down boundary violations, one batch per PR:
+
+```text
+Use monorepo-boundaries-cleanup to fix the next batch of turbo boundaries violations.
 ```
 
 Use CI mode when the report should fail a run at a severity threshold:
