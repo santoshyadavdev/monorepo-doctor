@@ -29,4 +29,4 @@ npm run dev     # syncs ../skills, then starts the dev server
 npm run build   # syncs ../skills, then builds to site/dist
 ```
 
-Pages under **Reference** and the raw files under `/skills/` are generated from `skills/` by `site/scripts/sync-skills.mjs` — edit the skill files, not the generated pages. Pushes to `master` that touch `skills/` or `site/` deploy to [monorepo-skills.dev](https://monorepo-skills.dev) via GitHub Pages.
+Pages under **Reference** and the raw files under `/skills/` are generated from `skills/` by `site/scripts/sync-skills.mjs` — edit the skill files, not the generated pages. The site deploys to [monorepo-skills.dev](https://monorepo-skills.dev) on Cloudflare Workers (static assets) through Workers Builds: pushes to `master` deploy production, and pull requests get preview URLs. Config lives in `site/wrangler.jsonc`; `npm run preview:cf` serves the build locally with Wrangler.

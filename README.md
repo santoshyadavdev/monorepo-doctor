@@ -234,4 +234,4 @@ The docs at [monorepo-skills.dev](https://monorepo-skills.dev) are an [Astro Sta
 cd site && npm ci && npm run dev
 ```
 
-`.github/workflows/docs.yml` builds the site on pull requests and deploys it to GitHub Pages on pushes to `master`.
+The site is deployed to Cloudflare Workers (static assets) by Workers Builds, configured in `site/wrangler.jsonc`. `.github/workflows/docs.yml` only runs a build check.

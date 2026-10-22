@@ -48,7 +48,7 @@ For each violation, use the first fix that's correct:
 
 ### Baselines
 
-Use the tool's native mechanism where one exists: ESLint bulk suppressions, dependency-cruiser `--ignore-known`. For tools without one, such as `turbo boundaries` or Bazel, add a small script that diffs the linter output against a checked-in, sorted list and fails on new entries.
+Use the tool's native mechanism where one exists: ESLint bulk suppressions, dependency-cruiser `--ignore-known`. For tools without one, such as `turbo boundaries` or Bazel, add a small script that canonicalizes each finding to its unique (importing file, import specifier) key, sorts and deduplicates the keys, and fails only on keys missing from the checked-in baseline.
 
 :::caution
 Never baseline a violation by widening access — Bazel `visibility`/`package_group`, Nx tag constraints, or boundary allow rules. That makes the dependency legal instead of tracking it.
