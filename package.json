@@ -2,7 +2,8 @@
   "name": "monorepo-doctor",
   "private": true,
   "type": "module",
-  "description": "Agent skill that audits JS/TS monorepos (Nx, Turborepo, workspaces) for boundary, cycle, caching, CI-coverage and prod-leakage problems.",
+  "description": "Agent skills for JS/TS monorepos (Nx, Turborepo, workspaces): monorepo-doctor audits boundaries, cycles, caching, CI coverage and prod leakage; monorepo-boundaries-cleanup pays boundary violations down in small PRs.",
+  "homepage": "https://monorepo-skills.dev",
   "license": "MIT",
   "engines": { "node": ">=22.5" },
   "scripts": {

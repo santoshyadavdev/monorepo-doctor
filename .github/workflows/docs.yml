@@ -1,0 +1,33 @@
+name: docs
+
+# Build check only. Deploys run in Cloudflare Workers Builds (see site/wrangler.jsonc).
+on:
+  push:
+    branches: [master]
+    paths: ['skills/**', 'site/**', '.github/workflows/docs.yml']
+  pull_request:
+    paths: ['skills/**', 'site/**', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: site/.nvmrc
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+      - run: npm run build

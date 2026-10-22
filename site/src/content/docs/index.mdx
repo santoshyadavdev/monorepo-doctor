@@ -1,0 +1,63 @@
+---
+title: Monorepo Skills
+description: Agent skills that find and fix the monorepo problems teams keep missing — boundaries, cycles, caching, CI coverage and test code in production.
+template: splash
+hero:
+  tagline: Agent skills that find — and then fix — the monorepo problems teams keep missing.
+  image:
+    file: ../../../public/favicon.svg
+  actions:
+    - text: Get started
+      link: /getting-started/
+      icon: right-arrow
+    - text: For agents (llms.txt)
+      link: /for-agents/
+      icon: document
+      variant: minimal
+    - text: View on GitHub
+      link: https://github.com/santoshyadavdev/monorepo-doctor
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+```bash
+npx skills add santoshyadavdev/monorepo-doctor
+```
+
+<CardGrid>
+  <Card title="monorepo-doctor — audit" icon="magnifier">
+    A **read-only** audit for npm, yarn, pnpm and bun workspaces, with deeper rules for Nx and Turborepo. Five
+    independent checks, evidence for every finding, Markdown and JSON reports, and a CI threshold mode.
+  </Card>
+  <Card title="monorepo-boundaries-cleanup — refactor" icon="pencil">
+    A refactoring workflow that pays boundary violations down in **small PRs against a baseline**, never weakening CI,
+    and stops after each PR for your CI report.
+  </Card>
+</CardGrid>
+
+## What gets missed
+
+<CardGrid>
+  <Card title="Package boundaries" icon="puzzle">
+    Deep imports into another package's internals, unlisted dependencies, and no boundary enforcement.
+  </Card>
+  <Card title="Circular dependencies" icon="random">
+    Package and file cycles, ranked by whether a binding is read during module evaluation.
+  </Card>
+  <Card title="Task caching" icon="rocket">
+    Cache keys that miss env vars or outputs and replay stale green results, or inputs that rebuild too often.
+  </Card>
+  <Card title="CI test coverage" icon="warning">
+    Shallow checkouts, missing base refs and undeclared workspace deps that make affected tests skip silently.
+  </Card>
+  <Card title="Test code in production" icon="error">
+    Specs, fixtures and test libraries that end up in published tarballs or deployable builds.
+  </Card>
+</CardGrid>
+
+<CardGrid>
+  <LinkCard title="monorepo-doctor" href="/skills/monorepo-doctor/" description="What it checks, how it works, and what it guarantees." />
+  <LinkCard title="monorepo-boundaries-cleanup" href="/skills/monorepo-boundaries-cleanup/" description="Rules and workflow for paying down violations." />
+</CardGrid>
