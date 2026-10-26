@@ -57,7 +57,7 @@ Run monorepo-doctor and write the reports to ./reports.
 The agent finishes with a summary and the paths to `monorepo-doctor-report.md` and `monorepo-doctor-report.json`.
 
 :::tip[Install dependencies first for the best coverage]
-The audit works on a fresh clone, but `knip`, `publint`, Nx graph refreshes and Turbo dry runs need `node_modules` or a local `nx`/`turbo` binary. Without them, the affected checks are reported as `partial` with a reason — never silently skipped.
+The audit works on a fresh clone, but `knip`, `publint`, Nx graph refreshes and Turbo dry runs need `node_modules` with those tools installed locally. The skill doesn't download them unless you explicitly allow downloads in your prompt. Without them, the affected checks are reported as `partial` with a reason — never silently skipped.
 :::
 
 ## Fix what it found

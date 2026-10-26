@@ -77,8 +77,10 @@ It may run:
 
 - the Node snippets in its references (Node built-ins only)
 - `npm pack --dry-run --json --ignore-scripts`
-- `npx --yes knip@6.41.0` and `npm_config_ignore_scripts=true npx --yes publint@0.3.25` — pinned exact versions
-- `npx nx` / `npx turbo` **only** when a local binary exists, and only for graph, `--dry=json` and `boundaries` inspection — never real task execution
+- `knip` and `publint` from your repo's `node_modules/.bin` **only** when installed there
+- `nx` / `turbo` from your repo's `node_modules/.bin` **only** when installed there, and only for graph, `--dry=json` and `boundaries` inspection — never real task execution
+
+It downloads nothing at runtime by default. If you explicitly allow downloads in your prompt (for example *"Run monorepo-doctor, downloads allowed"*), it may fetch the pinned `knip@6.41.0` and `publint@0.3.25` with install scripts disabled — never other packages or versions.
 
 Nx graph runs with `NX_DAEMON=false NX_NO_CLOUD=true` and a workspace-data directory under `$W`, so it doesn't start the daemon or write `.nx/workspace-data` into your repo. Turbo commands use `TURBO_TELEMETRY_DISABLED=1`.
 
@@ -86,7 +88,7 @@ Nx graph runs with `NX_DAEMON=false NX_NO_CLOUD=true` and a workspace-data direc
 `knip` and Nx load repository configuration files, which can execute config code.
 :::
 
-Without `node_modules`, knip and publint are skipped or marked `partial`. Without a local `nx`/`turbo`, static config analysis still runs, but graph refreshes, Turbo dry-run hash comparisons and `turbo boundaries` are marked `partial`.
+Without `node_modules`, or when knip/publint aren't installed locally (and downloads aren't allowed), those steps are skipped and the check is marked `partial`. Without a local `nx`/`turbo`, static config analysis still runs, but graph refreshes, Turbo dry-run hash comparisons and `turbo boundaries` are marked `partial`.
 
 ## Next
 

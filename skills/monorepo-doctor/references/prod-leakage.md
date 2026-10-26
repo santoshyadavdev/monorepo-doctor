@@ -28,11 +28,12 @@ Test libraries: `vitest`, `jest`, `@jest/*`, `mocha`, `chai`, `sinon`, `@testing
 2. Check existing build output dirs for compiled test files.
 3. Resolve each package's build tsconfig and check `include`/`exclude` against `scan.packages[p].testFiles`. Treat `include: ["src"]` as `src/**/*`. Follow the full `extends` chain for `include`/`exclude` (the nearest config that sets each wins; paths are relative to the config that declares them) and compare `testFiles` against the effective values. If a link in the chain can't be resolved, mark the check `partial` and name the unresolved config in `reason`.
 4. Check `dependencies` against the test-library list.
-5. If `hasNodeModules`, for each publishable package that has its build output present:
+5. If `hasNodeModules` and `tools.publint`, for each publishable package that has its build output present:
    ```bash
    W="$(node -p 'require("os").tmpdir()')/monorepo-doctor"
-   npm_config_ignore_scripts=true npx --yes publint@0.3.25 "<pkg-dir>" 2>&1
+   npm_config_ignore_scripts=true ./node_modules/.bin/publint "<pkg-dir>" 2>&1
    ```
+   If `tools.publint` is false, skip and mark `partial` with reason `publint not installed locally`. Only if the user explicitly allowed downloads, run `npm_config_ignore_scripts=true npx --yes publint@0.3.25 "<pkg-dir>"` instead (exact version, never `@latest`).
    publint prints sections `Errors:`, `Warnings:`, `Suggestions:` followed by numbered messages. One finding per message. Skip when `node_modules` is missing. Skip unbuilt packages and set status `partial` with reason `publint skipped for unbuilt packages: …`.
 6. Write `findings/prod-leakage.json`.
 
