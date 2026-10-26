@@ -145,12 +145,13 @@ const ws = {
   root, packageManager: pm, orchestrators, workspaceGlobs: globs,
   rootScripts: rootPkg.scripts ?? {},
   hasNodeModules: exists('node_modules'),
+  tools: { knip: exists('node_modules/.bin/knip'), publint: exists('node_modules/.bin/publint') },
   ciFiles: ci.map(toPosix),
   packages,
 };
 fs.writeFileSync(path.join(work, 'workspace.json'), JSON.stringify(ws, null, 2));
 if (!packages.length) { console.error('NO_WORKSPACE: no workspace packages found under ' + root); process.exit(2); }
-console.log(JSON.stringify({ root, packageManager: pm, orchestrators, packages: packages.length, ciFiles: ws.ciFiles.length }));
+console.log(JSON.stringify({ root, packageManager: pm, orchestrators, tools: ws.tools, packages: packages.length, ciFiles: ws.ciFiles.length }));
 EOF
 node "$W/detect.mjs" "<workspace-root>"
 ```
@@ -158,8 +159,9 @@ node "$W/detect.mjs" "<workspace-root>"
 ## Interpreting the result
 
 - Exit code 2 / `NO_WORKSPACE`: this is not a monorepo. Stop and tell the user; do not produce a report.
-- `orchestrators[].installed: false`: never call `npx nx` / `npx turbo` (it would download a different version). Use static config analysis only, and mark dependent sub-steps `partial`.
-- `hasNodeModules: false`: skip `knip` and any step that needs resolved dependencies; mark `partial`.
+- `orchestrators[].installed: false`: never run nx / turbo (`npx` would download a different version). Use static config analysis only, and mark dependent sub-steps `partial`.
+- `tools.knip` / `tools.publint: false`: skip that tool and mark the check `partial` with reason `<tool> not installed locally`, unless the user explicitly allowed downloads (see SKILL.md).
+- `hasNodeModules: false`: skip `knip`, `publint` and any step that needs resolved dependencies, even if downloads are allowed; mark `partial`.
 - `packages[].source === "project.json"`: an Nx project without its own package.json — package.json-based rules (missing test script, undeclared dependency, npm pack) do not apply to it.
 - Print a one-line summary of the inventory to the user before continuing.
 - `ciFiles` contains the top-level CI files for GitHub Actions, GitLab CI, Azure Pipelines, CircleCI, Bitbucket Pipelines, Jenkins, Buildkite, and Travis. The CI coverage check follows local GitLab `include:` entries and local GitHub reusable workflows referenced from these files.
