@@ -36,6 +36,8 @@ This is the Turbo counterpart to Nx base validation, **not** a requirement to se
 
 For each finding, locate the Turbo invocation (`location.file` and line), quote its effective selector/env and relevant checkout/event configuration in `evidence`, explain why the comparison fails or omits required tests, and give a concrete correction. Do not raise a separate missing-base finding for each unset environment variable.
 
+For an unknown runtime comparison value, include the CI filename, the wording `unavailable runtime comparison`, and the unresolved variable or input in the partial check's `reason`.
+
 Authoritative semantics: [run: affected and filters](https://turborepo.com/docs/reference/run#--affected), [system environment variables](https://turborepo.com/docs/reference/system-environment-variables), and [constructing CI: GitHub Actions defaults and fallback](https://turborepo.com/docs/crafting-your-repository/constructing-ci#using---affected-in-github-actions). Implementation details can be checked in [`git.rs`](https://github.com/vercel/turborepo/blob/4485b660b2773d0700290521df228d73017205dc/crates/turborepo-scm/src/git.rs) and [`target_selector.rs`](https://github.com/vercel/turborepo/blob/4485b660b2773d0700290521df228d73017205dc/crates/turborepo-scope/src/target_selector.rs); do not assume the latest implementation matches an older installed version.
 
 ## Fix guidance

@@ -130,7 +130,7 @@ test('Turbo fixture contract requires broken invocations, rejects false positive
   });
   const valid = (findings = positives) => ({
     ...report(findings),
-    checks: [{ check: 'ci-coverage', status: 'partial', reason: '.github/workflows/unknown-comparison-base.yml: TEST_COMPARISON_BASE runtime value unavailable' }],
+    checks: [{ check: 'ci-coverage', status: 'partial', reason: '.github/workflows/unknown-comparison-base.yml: unavailable runtime comparison; TEST_COMPARISON_BASE value unknown' }],
   });
   assert.equal(verify(valid(), exp).ok, true);
   for (const checks of [
@@ -143,6 +143,8 @@ test('Turbo fixture contract requires broken invocations, rejects false positive
     [{ check: 'ci-coverage', status: 'partial', reason: '   ' }],
     [{ check: 'ci-coverage', status: 'partial', reason: {} }],
     [{ check: 'ci-coverage', status: 'partial', reason: 'unrelated missing tool' }],
+    [{ check: 'ci-coverage', status: 'partial', reason: 'unknown-comparison-base.yml: unrelated missing tool' }],
+    [{ check: 'ci-coverage', status: 'partial', reason: 'unavailable runtime comparison; TEST_COMPARISON_BASE value unknown' }],
   ]) {
     const result = verify({ ...valid(), checks }, exp);
     assert.equal(result.ok, false);

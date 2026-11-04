@@ -227,7 +227,7 @@ node scripts/verify-fixture.mjs "$(node -p 'require("os").tmpdir()')/monorepo-do
 
 Expected entries accept an optional `file` (matching `location.file`) as well as `package`. Optional `mustNotFind` entries use the same matching rules to reject false positives; the Turbo contract uses them to protect valid defaults and prevent duplicate shallow-history findings. These contracts verify agent-generated reports; the Node tests exercise the verifier, not an automated implementation of the agent's semantic audit.
 
-Optional `checks` entries match `report.checks` by `check` and require the specified `status`. A `reasonIncludes` array requires a nonempty string reason containing every literal substring. The Turbo contract requires `ci-coverage` to be `partial` with a reason naming `unknown-comparison-base.yml`, while still rejecting an invalid-base finding for that workflow.
+Optional `checks` entries match `report.checks` by `check` and require the specified `status`. A `reasonIncludes` array requires a nonempty string reason containing every literal substring. The Turbo contract requires `ci-coverage` to be `partial` with a reason naming `unknown-comparison-base.yml` and stating `unavailable runtime comparison`, while still rejecting an invalid-base finding for that workflow.
 
 `npm run check` validates every skill's frontmatter, reference links, and (for monorepo-doctor) finding-id coverage. It should print:
 
