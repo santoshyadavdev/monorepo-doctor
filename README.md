@@ -37,6 +37,22 @@ When Nx is present, it also reads `nx.json`, `project.json`, package `nx` target
 
 Turbo boundary configuration is also checked without a local binary when a supported version is established (stable 2.x >= 2.5.0). It catches root-only `boundaries.tags` placed in a package config and root rule names that collide with workspace package names. Turbo tags and policies remain optional: absent rules and untagged packages are not findings, and package names in allow/deny lists are valid.
 
+### Nx and Turborepo coverage
+
+The checks cover the same risks where possible, but respect each tool's configuration and defaults.
+
+| Capability | Nx | Turborepo |
+|---|---|---|
+| Unnecessarily disabled caching (low) | `caching/nx-cache-disabled`: effective explicit `cache: false` on deterministic targets, after compatible defaults and project/package overrides. | `caching/turbo-cache-disabled`: explicit `cache: false` on deterministic tasks. |
+| Boundary configuration | Missing/permissive ESLint enforcement and untagged projects under those conditions. | `boundaries/turbo-package-boundaries-tags` and `boundaries/turbo-tag-package-name-collision` (medium); optional tags/policies are not required. |
+| Affected CI comparison (high) | `ci-coverage/nx-affected-base-missing`: no configured base or SHA setup. | `ci-coverage/turbo-invalid-comparison-base`: a proven broken comparison, not merely an omitted explicit base. |
+| Dependency-aware test caching | `ci-coverage/nx-test-inputs-ignore-deps` | `ci-coverage/turbo-test-missing-dependson` |
+| Repeated dry-run hash comparison | No equivalent in the read-only workflow. | `caching/unstable-hash`, when local Turbo is installed. |
+
+Intentionally uncached side-effecting or external-state-dependent tasks are excluded. Unresolved Nx inference or Turbo runtime comparison values produce a `partial` check with a reason, not speculative findings. Shared Nx defaults are reported once per source config object, with affected project/target pairs in evidence rather than `location.package`.
+
+See the [caching guide](https://monorepo-skills.dev/guides/caching-and-stale-results/), [CI guide](https://monorepo-skills.dev/guides/ci/), and [skill overview](https://monorepo-skills.dev/skills/monorepo-doctor/) for examples and limits.
+
 ## Install
 
 Install from the repository with:

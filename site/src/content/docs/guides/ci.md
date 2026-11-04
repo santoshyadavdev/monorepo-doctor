@@ -82,3 +82,17 @@ This example doesn't install dependencies, so the knip, Nx graph and Turbo dry-r
 The audit accepts Turborepo's documented `--affected` defaults, including GitHub Actions PR and push base detection. You do not need to add `TURBO_SCM_BASE` merely to satisfy the audit. The high-severity `ci-coverage/turbo-invalid-comparison-base` finding requires evidence of a broken comparison, such as comparing a clean checkout's `HEAD` to itself.
 
 `TURBO_SCM_BASE` and `TURBO_SCM_HEAD` configure `--affected`; they do not repair an explicit `--filter='...[base...head]'` range. Fix that range's endpoints instead. Unknown runtime values make the comparison audit partial, not a finding. Missing history remains a separate `ci-coverage/shallow-checkout-affected` issue: `--affected` falls back to treating all packages as changed when history cannot be resolved, while explicit Git filters can fail.
+
+### Broken comparisons vs. unavailable evidence
+
+On a clean checkout, this invocation compares `HEAD` to the default head, also `HEAD`, so it can exclude the changes that should select tests:
+
+```bash
+TURBO_SCM_BASE=HEAD turbo run test --affected
+```
+
+Remove the override when Turbo's documented CI defaults cover the job, or supply the intended event-specific base/head. An explicit `--filter='...[HEAD...HEAD]'` must instead be corrected in the filter itself. Full checkout history alone does not repair either self-comparison.
+
+The audit follows environment values and local wrappers without executing them. It does not flag `HEAD^` merely for being a previous commit, require PR-only variables in push jobs, or treat arguments after Turbo's `--` delimiter as selection flags. A finding needs evidence that the invocation fails or omits required tests, accounting for the other selectors.
+
+When a base comes from an unavailable secret, workflow output, or runtime input, `ci-coverage` is `partial` rather than clean or a speculative invalid-base finding. Its reason includes the CI filename, `unavailable runtime comparison`, and the unresolved variable or input. Other evidenced CI findings remain in the report. See the [comparison procedure](/reference/monorepo-doctor/ci-coverage/#turbo-comparison-base-validation) for version-specific defaults and selector handling.
