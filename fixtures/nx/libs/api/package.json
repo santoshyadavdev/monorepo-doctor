@@ -3,6 +3,13 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.lib.json --noEmit",
+    "format:check": "prettier --check src"
+  },
+  "nx": {
+    "targets": {
+      "format:check": { "cache": false }
+    }
   }
 }

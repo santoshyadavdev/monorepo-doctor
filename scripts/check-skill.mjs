@@ -39,7 +39,7 @@ export function checkSkill(skillDir, expectedDir) {
   else if (expectedDir) {
     for (const f of fs.readdirSync(expectedDir).filter((x) => x.endsWith('.json'))) {
       const exp = JSON.parse(fs.readFileSync(path.join(expectedDir, f), 'utf8'));
-      for (const { id } of exp.mustFind) {
+      for (const { id } of [...exp.mustFind, ...(exp.mustNotFind ?? [])]) {
         if (!corpus.includes('`' + id + '`')) errors.push(`${f}: finding id ${id} is not defined in any reference file`);
       }
     }

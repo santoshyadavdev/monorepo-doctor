@@ -213,6 +213,8 @@ npm run check
 
 Fixtures live under `fixtures/` and describe seeded monorepo problems for generic pnpm, Nx, and Turborepo workspaces. Expected findings live in `fixtures/expected/*.json`.
 
+The caching check includes `caching/nx-cache-disabled` and `caching/turbo-cache-disabled` for deterministic tasks explicitly configured not to cache; deliberately uncached tasks are excluded. The Nx fixture covers shared defaults, executor-key precedence, package targets, project overrides, and deliberate uncached tasks. Fixture contracts can select findings by `id` and optional `package` / `file`; optional `mustNotFind` entries reject false positives at every severity (unlike `cleanPackages`, which allows low-severity findings).
+
 Use `scripts/verify-fixture.mjs` to compare a generated report with an expected fixture contract:
 
 ```bash

@@ -4,6 +4,10 @@
   },
   "targetDefaults": {
     "build": { "cache": true, "dependsOn": ["^build"] },
-    "test": { "cache": true, "inputs": ["default"] }
+    "test": { "cache": true, "inputs": ["default"] },
+    "typecheck": { "cache": false },
+    "lint": { "cache": true },
+    "nx:run-commands": { "cache": false },
+    "unused:build": { "cache": false }
   }
 }

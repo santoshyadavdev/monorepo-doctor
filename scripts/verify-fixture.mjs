@@ -19,13 +19,15 @@ export function verify(report, expected) {
       if (report.summary[s] !== n) schemaErrors.push(`summary.${s} is ${report.summary[s]} but ${n} finding(s) have that severity`);
     }
   }
-  const missing = expected.mustFind.filter(
-    (e) => !findings.some((f) => f.id === e.id && (e.package === undefined || f.location?.package === e.package)),
-  );
+  const matches = (f, e) => f.id === e.id
+    && (e.package === undefined || f.location?.package === e.package)
+    && (e.file === undefined || f.location?.file === e.file);
+  const missing = expected.mustFind.filter((e) => !findings.some((f) => matches(f, e)));
+  const unexpected = findings.filter((f) => (expected.mustNotFind ?? []).some((e) => matches(f, e)));
   const cleanViolations = findings.filter(
     (f) => expected.cleanPackages.includes(f.location?.package) && RANK[f.severity] >= RANK.medium,
   );
-  return { missing, cleanViolations, schemaErrors, ok: !missing.length && !cleanViolations.length && !schemaErrors.length };
+  return { missing, unexpected, cleanViolations, schemaErrors, ok: !missing.length && !unexpected.length && !cleanViolations.length && !schemaErrors.length };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -36,7 +38,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
   const r = verify(JSON.parse(fs.readFileSync(reportPath, 'utf8')), JSON.parse(fs.readFileSync(expectedPath, 'utf8')));
   for (const e of r.schemaErrors) console.error(`✗ schema: ${e}`);
-  for (const m of r.missing) console.error(`✗ missing: ${m.id}${m.package ? ` (${m.package})` : ''}`);
+  for (const m of r.missing) console.error(`✗ missing: ${m.id}${m.package ? ` (${m.package})` : ''}${m.file ? ` at ${m.file}` : ''}`);
+  for (const f of r.unexpected) console.error(`✗ unexpected: ${f.id} [${f.severity}] ${f.location?.file}${f.location?.package ? ` (${f.location.package})` : ''}`);
   for (const c of r.cleanViolations) console.error(`✗ clean package flagged: ${c.id} [${c.severity}] ${c.location.package}`);
   if (!r.ok) process.exit(1);
   console.log('✓ fixture report matches expectations');

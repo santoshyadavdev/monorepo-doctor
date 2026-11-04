@@ -1,1 +1,10 @@
-{ "name": "@nxf/api", "targets": {} }
+{
+  "name": "@nxf/api",
+  "targets": {
+    "check-types": { "command": "tsc -p libs/api/tsconfig.lib.json --noEmit", "cache": false },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": { "command": "eslint libs/api/src" }
+    }
+  }
+}

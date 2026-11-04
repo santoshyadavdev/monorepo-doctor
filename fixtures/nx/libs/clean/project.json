@@ -1,1 +1,20 @@
-{ "name": "@nxf/clean", "tags": ["scope:shared", "type:util"] }
+{
+  "name": "@nxf/clean",
+  "tags": ["scope:shared", "type:util"],
+  "targets": {
+    "format:check": { "cache": true },
+    "compile": { "command": "tsc --noEmit", "cache": true },
+    "lint": {
+      "command": "eslint libs/clean",
+      "cache": false,
+      "inputs": ["externalState"]
+    },
+    "test:unit": { "command": "vitest --watch", "cache": false },
+    "build": { "command": "tsc --watch", "cache": false, "continuous": true },
+    "test:integration": { "command": "vitest run integration", "cache": false },
+    "deploy": { "command": "deploy", "cache": false }
+  },
+  "namedInputs": {
+    "externalState": ["default", { "env": "SERVICE_URL" }]
+  }
+}

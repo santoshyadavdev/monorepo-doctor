@@ -1,5 +1,16 @@
 {
   "name": "@nxf/clean",
   "private": true,
-  "scripts": { "test": "vitest run" }
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "format:check": "prettier --check src"
+  },
+  "nx": {
+    "targets": {
+      "typecheck": { "cache": true },
+      "format:check": { "cache": false }
+    }
+  }
 }
