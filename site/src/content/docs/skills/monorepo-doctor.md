@@ -32,6 +32,41 @@ Packages are discovered from `package.json#workspaces` and `pnpm-workspace.yaml`
 
 For verified stable Turbo 2.x >= 2.5.0, static checks also catch root-only `boundaries.tags` placed in a package config and root rule names that collide with workspace package names, even without a local binary. Tags and policies are optional: absent rules and untagged packages are not findings, and package names in allow/deny lists are valid.
 
+### Nx and Turborepo coverage
+
+Similar risks do not always have identical detection rules:
+
+| Capability | Nx | Turborepo |
+|---|---|---|
+| Unnecessarily disabled caching (low) | `caching/nx-cache-disabled` resolves effective explicit false through compatible defaults and overrides. | `caching/turbo-cache-disabled` checks deterministic tasks with explicit false. |
+| Boundary configuration | Checks missing/permissive ESLint enforcement and untagged projects under those conditions. | Checks invalid tag-rule placement and tag/package-name collisions (medium), without requiring policies. |
+| Affected CI comparison (high) | `ci-coverage/nx-affected-base-missing` checks base configuration or SHA setup. | `ci-coverage/turbo-invalid-comparison-base` requires a proven broken comparison; documented defaults are accepted. |
+| Dependency-aware test caching | `ci-coverage/nx-test-inputs-ignore-deps` | `ci-coverage/turbo-test-missing-dependson` |
+| Dry-run hash stability | No equivalent in the read-only workflow. | `caching/unstable-hash` needs local Turbo. |
+
+Missing outputs, test-inclusive build inputs, undeclared environment variables, volatile inputs, and shallow affected checkouts are checked for both tools. Unresolved configuration or runtime evidence is reported as `partial` with a reason; the audit does not guess findings to make the two tools look equivalent.
+
+### Turbo boundary configuration examples
+
+`boundaries/turbo-package-boundaries-tags` reports a package's own `turbo.json` containing a root-only rule map:
+
+```json
+{
+  "extends": ["//"],
+  "boundaries": {
+    "tags": {
+      "type:app": { "dependencies": { "deny": ["type:app"] } }
+    }
+  }
+}
+```
+
+Move the rule map into the root `turbo.json`, preserving existing policies. Package labels belong in the package config's top-level `"tags": ["type:app"]`, not in `boundaries.tags`. These are Turbo labels, not Nx `project.json` tags.
+
+`boundaries/turbo-tag-package-name-collision` reports a root `boundaries.tags` key such as `"@acme/web"` when a workspace package has that manifest name. Rename the tag and its label references, but preserve allow/deny selectors that intentionally refer to the package. Nx-only projects discovered from `project.json` are not Turbo workspace packages for these checks.
+
+The static checks do not replace `turbo boundaries` policy evaluation. Unknown or unsupported Turbo versions make the static portion `partial`; without a local binary, command-based inspection is also `partial`, while independently established static findings remain in the report.
+
 ## Output
 
 Two files, written to `<os tmpdir>/monorepo-doctor-reports` by default (outside your repo) or to a directory you name in the prompt:

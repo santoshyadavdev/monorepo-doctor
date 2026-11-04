@@ -30,6 +30,26 @@ The caching check also reports deterministic tasks explicitly configured with `c
 
 Long-running, side-effecting, and external-state-dependent tasks remain deliberately uncached. Review inputs and outputs before enabling caching rather than blanket-enabling all targets.
 
+### Nx defaults and overrides
+
+For example, consider this shared `nx.json` default:
+
+```json
+{
+  "targetDefaults": {
+    "typecheck": { "cache": false }
+  }
+}
+```
+
+An existing deterministic `typecheck` target inheriting that false can produce a low-severity finding. The default does not create targets by itself. A project target with explicit `"cache": true` overrides it and is not included in that finding.
+
+Nx executor-keyed defaults take precedence over target-name defaults; they are not merged together. A selected default with a conflicting executor is skipped, and version-specific command/script compatibility also matters. Only the config object supplying the effective false is reported.
+
+Shared defaults produce one finding per source config object in `nx.json`, without `location.package`. Evidence identifies the source, such as `targetDefaults.typecheck`, and the affected `<project>:<target>` pairs. Package/project-specific findings point to their own manifest or `project.json`. This prevents an overridden or intentionally uncached target from being attributed to a shared finding.
+
+If inference or custom/legacy runner semantics cannot be resolved, that portion is `partial` with an explanation. Other independently proven findings are retained. The [full caching reference](/reference/monorepo-doctor/caching/#resolving-nx-disabled-cache-findings) defines the resolution and exclusion rules.
+
 ## Limits
 
 - It finds configurations that **can** replay stale results. It doesn't prove a specific cache entry is stale.
