@@ -21,7 +21,7 @@ The companion skill [`monorepo-boundaries-cleanup`](skills/monorepo-boundaries-c
 
 | Check | What it looks for | Example finding ids |
 |---|---|---|
-| Package boundaries | Packages that are too large for their consumers (packages no other workspace package imports are never flagged), import through another package's internals, have knip unlisted/unused dependencies, or lack Nx/Turbo boundary enforcement. | `boundaries/deep-import`, `boundaries/nx-missing-module-boundaries-rule`, `boundaries/turbo-boundaries-violation` |
+| Package boundaries | Packages that are too large for their consumers (packages no other workspace package imports are never flagged), import through another package's internals, have knip unlisted/unused dependencies, lack Nx enforcement, or have invalid Turbo boundary configuration / reported violations. | `boundaries/deep-import`, `boundaries/nx-missing-module-boundaries-rule`, `boundaries/turbo-package-boundaries-tags`, `boundaries/turbo-tag-package-name-collision`, `boundaries/turbo-boundaries-violation` |
 | Circular dependencies | Package-level cycles and value-import file cycles, one finding per strongly connected group. File cycles are medium when a binding is read during module evaluation, low when every use is deferred, and skipped for idiomatic lazy ORM references. | `circular-deps/package-cycle`, `circular-deps/file-cycle` |
 | Task caching | Nx/Turbo cache configuration that can replay stale results or miss useful cache hits: missing outputs, undeclared env vars, volatile inputs, and dependency-blind test caches. | `caching/missing-outputs`, `caching/undeclared-env`, `caching/build-inputs-include-tests` |
 | CI test coverage | CI paths where tests silently do not run for changed code: no test command, shallow affected checkout, missing Nx base refs, or undeclared workspace dependencies. | `ci-coverage/tests-not-run-in-ci`, `ci-coverage/shallow-checkout-affected`, `ci-coverage/turbo-test-missing-dependson` |
@@ -34,6 +34,8 @@ Findings must be actionable: when the honest fix is "keep it as-is" (for example
 The skill supports JavaScript and TypeScript monorepos using npm, yarn, pnpm, or bun workspaces. It discovers packages from `package.json#workspaces` and `pnpm-workspace.yaml`, then scans source imports, package manifests, CI files, and build/test configuration.
 
 When Nx is present, it also reads `nx.json`, `project.json`, package `nx` targets, tags, target defaults, named inputs, and local Nx graph output when the local `nx` binary is installed. When Turborepo is present, it reads `turbo.json`, package-level Turbo overrides, dry-run metadata when local `turbo` is installed, and `turbo boundaries` output when available.
+
+Turbo boundary configuration is also checked without a local binary when a supported version is established (stable 2.x >= 2.5.0). It catches root-only `boundaries.tags` placed in a package config and root rule names that collide with workspace package names. Turbo tags and policies remain optional: absent rules and untagged packages are not findings, and package names in allow/deny lists are valid.
 
 ## Install
 

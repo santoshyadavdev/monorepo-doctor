@@ -1,0 +1,9 @@
+{
+  "extends": ["//"],
+  "tags": ["public"],
+  "boundaries": {
+    "tags": {
+      "public": { "dependencies": { "deny": ["internal"] } }
+    }
+  }
+}

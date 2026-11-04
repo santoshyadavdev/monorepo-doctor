@@ -9,7 +9,7 @@ description: A read-only audit of JS/TS monorepos for package boundaries, circul
 
 | Check | What it looks for | Example finding ids |
 |---|---|---|
-| [Package boundaries](/reference/monorepo-doctor/boundaries/) | Packages too large for their consumers (packages no other workspace package imports are never flagged), imports through another package's internals, knip unlisted/unused dependencies, missing Nx/Turbo boundary enforcement. | `boundaries/deep-import`, `boundaries/nx-missing-module-boundaries-rule`, `boundaries/turbo-boundaries-violation` |
+| [Package boundaries](/reference/monorepo-doctor/boundaries/) | Packages too large for their consumers (packages no other workspace package imports are never flagged), imports through another package's internals, knip unlisted/unused dependencies, missing Nx enforcement, invalid Turbo boundary configuration / reported violations. | `boundaries/deep-import`, `boundaries/nx-missing-module-boundaries-rule`, `boundaries/turbo-package-boundaries-tags`, `boundaries/turbo-tag-package-name-collision`, `boundaries/turbo-boundaries-violation` |
 | [Circular dependencies](/reference/monorepo-doctor/circular-deps/) | Package-level cycles and value-import file cycles, one finding per strongly connected group. File cycles are medium when a binding is read during module evaluation, low when every use is deferred, and skipped for idiomatic lazy ORM references. | `circular-deps/package-cycle`, `circular-deps/file-cycle` |
 | [Task caching](/reference/monorepo-doctor/caching/) | Nx/Turbo cache configuration that can replay stale results or miss useful hits: missing outputs, undeclared env vars, volatile inputs, dependency-blind test caches. | `caching/missing-outputs`, `caching/undeclared-env`, `caching/build-inputs-include-tests` |
 | [CI test coverage](/reference/monorepo-doctor/ci-coverage/) | CI paths where tests silently don't run for changed code: no test command, shallow affected checkout, missing Nx base refs, undeclared workspace dependencies. | `ci-coverage/tests-not-run-in-ci`, `ci-coverage/shallow-checkout-affected`, `ci-coverage/turbo-test-missing-dependson` |
@@ -29,6 +29,8 @@ Findings must be actionable. When the honest fix is "keep it as-is" — for exam
 ### Supported workspaces
 
 Packages are discovered from `package.json#workspaces` and `pnpm-workspace.yaml`. With **Nx**, it also reads `nx.json`, `project.json`, package `nx` targets, tags, target defaults, named inputs, and a local Nx graph when the `nx` binary is installed. With **Turborepo**, it reads `turbo.json`, package-level overrides, dry-run metadata when `turbo` is installed, and `turbo boundaries` output when available.
+
+For verified stable Turbo 2.x >= 2.5.0, static checks also catch root-only `boundaries.tags` placed in a package config and root rule names that collide with workspace package names, even without a local binary. Tags and policies are optional: absent rules and untagged packages are not findings, and package names in allow/deny lists are valid.
 
 ## Output
 

@@ -2,6 +2,8 @@
   "fixture": "turborepo",
   "cleanPackages": ["@tf/clean"],
   "mustFind": [
+    { "id": "boundaries/turbo-package-boundaries-tags", "package": "@tf/web" },
+    { "id": "boundaries/turbo-tag-package-name-collision", "package": "@tf/web" },
     { "id": "caching/missing-outputs" },
     { "id": "caching/build-inputs-include-tests" },
     { "id": "caching/undeclared-env", "package": "@tf/web" },
