@@ -21,7 +21,9 @@ export function verify(report, expected) {
   }
   const matches = (f, e) => f.id === e.id
     && (e.package === undefined || f.location?.package === e.package)
-    && (e.file === undefined || f.location?.file === e.file);
+    && (e.file === undefined || f.location?.file === e.file)
+    && (e.evidenceIncludes === undefined || (typeof f.evidence === 'string'
+      && e.evidenceIncludes.every((text) => f.evidence.includes(text))));
   const missing = expected.mustFind.filter((e) => !findings.some((f) => matches(f, e)));
   const unexpected = findings.filter((f) => (expected.mustNotFind ?? []).some((e) => matches(f, e)));
   const cleanViolations = findings.filter(
