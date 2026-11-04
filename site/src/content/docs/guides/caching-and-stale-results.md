@@ -24,6 +24,12 @@ When a local `turbo` binary is installed, the skill runs `turbo run build --dry=
 
 Without a local `turbo`, the check is marked `partial` with the reason `turbo not installed; dry-run hash comparison skipped`.
 
+## Unnecessary cache misses
+
+The caching check also reports deterministic tasks explicitly configured with `cache: false`: `caching/nx-cache-disabled` for Nx and `caching/turbo-cache-disabled` for Turborepo. Nx analysis resolves applicable `targetDefaults`, package targets, and project overrides; missing cache declarations or missing legacy `cacheableOperations` entries are not treated as explicit false. Inferred targets and runner semantics that cannot be resolved are marked `partial`, not guessed.
+
+Long-running, side-effecting, and external-state-dependent tasks remain deliberately uncached. Review inputs and outputs before enabling caching rather than blanket-enabling all targets.
+
 ## Limits
 
 - It finds configurations that **can** replay stale results. It doesn't prove a specific cache entry is stale.

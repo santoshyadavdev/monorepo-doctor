@@ -5,10 +5,18 @@
     { "id": "caching/missing-outputs", "package": "@nxf/api" },
     { "id": "caching/build-inputs-include-tests" },
     { "id": "caching/undeclared-env", "package": "@nxf/api" },
+    { "id": "caching/nx-cache-disabled", "file": "nx.json", "evidenceIncludes": ["targetDefaults.typecheck", "@nxf/api:typecheck"] },
+    { "id": "caching/nx-cache-disabled", "file": "nx.json", "evidenceIncludes": ["targetDefaults[\"nx:run-commands\"]", "@nxf/api:lint"] },
+    { "id": "caching/nx-cache-disabled", "file": "libs/api/package.json", "package": "@nxf/api" },
+    { "id": "caching/nx-cache-disabled", "file": "libs/api/project.json", "package": "@nxf/api" },
     { "id": "ci-coverage/nx-test-inputs-ignore-deps" },
     { "id": "ci-coverage/shallow-checkout-affected" },
     { "id": "ci-coverage/nx-affected-base-missing" },
     { "id": "boundaries/nx-missing-module-boundaries-rule" },
     { "id": "boundaries/nx-untagged-project", "package": "@nxf/api" }
+  ],
+  "mustNotFind": [
+    { "id": "caching/nx-cache-disabled", "package": "@nxf/clean" },
+    { "id": "caching/nx-cache-disabled", "file": "nx.json", "evidenceIncludes": ["@nxf/clean:"] }
   ]
 }

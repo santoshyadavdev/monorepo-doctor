@@ -69,3 +69,8 @@ test('expected finding ids must be defined in a reference', () => {
   const { dir, expDir } = makeSkill({ expected: { mustFind: [{ id: 'nope/missing' }], cleanPackages: [] } });
   assert.ok(checkSkill(dir, expDir).some((e) => e.includes('nope/missing')));
 });
+
+test('forbidden finding ids must also be defined in a reference', () => {
+  const { dir, expDir } = makeSkill({ expected: { mustFind: [], mustNotFind: [{ id: 'nope/missing' }], cleanPackages: [] } });
+  assert.ok(checkSkill(dir, expDir).some((e) => e.includes('nope/missing')));
+});
