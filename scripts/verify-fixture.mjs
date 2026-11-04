@@ -29,7 +29,20 @@ export function verify(report, expected) {
   const cleanViolations = findings.filter(
     (f) => expected.cleanPackages.includes(f.location?.package) && RANK[f.severity] >= RANK.medium,
   );
-  return { missing, unexpected, cleanViolations, schemaErrors, ok: !missing.length && !unexpected.length && !cleanViolations.length && !schemaErrors.length };
+  const checkErrors = [];
+  for (const e of expected.checks ?? []) {
+    const actual = Array.isArray(report.checks) ? report.checks.find((c) => c.check === e.check) : undefined;
+    if (!actual) {
+      checkErrors.push(`missing check ${e.check}`);
+      continue;
+    }
+    if (actual.status !== e.status) checkErrors.push(`${e.check}: expected status ${e.status}, got ${actual.status}`);
+    if (e.reasonIncludes !== undefined && (typeof actual.reason !== 'string'
+      || !actual.reason.trim() || !e.reasonIncludes.every((text) => actual.reason.includes(text)))) {
+      checkErrors.push(`${e.check}: reason must be nonempty and include ${JSON.stringify(e.reasonIncludes)}`);
+    }
+  }
+  return { missing, unexpected, cleanViolations, schemaErrors, checkErrors, ok: !missing.length && !unexpected.length && !cleanViolations.length && !schemaErrors.length && !checkErrors.length };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -40,6 +53,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
   const r = verify(JSON.parse(fs.readFileSync(reportPath, 'utf8')), JSON.parse(fs.readFileSync(expectedPath, 'utf8')));
   for (const e of r.schemaErrors) console.error(`✗ schema: ${e}`);
+  for (const e of r.checkErrors) console.error(`✗ check: ${e}`);
   for (const m of r.missing) console.error(`✗ missing: ${m.id}${m.package ? ` (${m.package})` : ''}${m.file ? ` at ${m.file}` : ''}`);
   for (const f of r.unexpected) console.error(`✗ unexpected: ${f.id} [${f.severity}] ${f.location?.file}${f.location?.package ? ` (${f.location.package})` : ''}`);
   for (const c of r.cleanViolations) console.error(`✗ clean package flagged: ${c.id} [${c.severity}] ${c.location.package}`);

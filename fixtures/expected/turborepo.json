@@ -1,6 +1,9 @@
 {
   "fixture": "turborepo",
   "cleanPackages": ["@tf/clean"],
+  "checks": [
+    { "check": "ci-coverage", "status": "partial", "reasonIncludes": ["unknown-comparison-base.yml"] }
+  ],
   "mustFind": [
     { "id": "boundaries/turbo-package-boundaries-tags", "package": "@tf/web" },
     { "id": "boundaries/turbo-tag-package-name-collision", "package": "@tf/web" },
