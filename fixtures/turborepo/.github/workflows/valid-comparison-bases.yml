@@ -1,0 +1,45 @@
+name: Valid comparison bases
+on: [pull_request, push]
+jobs:
+  defaults:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run test --affected
+  explicit-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha }}
+      TURBO_SCM_HEAD: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run test --affected
+      - run: pnpm turbo run test -F "...[${TURBO_SCM_BASE}...${TURBO_SCM_HEAD}]"
+  no-git-comparison:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run test
+      - run: pnpm turbo run test --filter=@tf/clean
+      - run: pnpm turbo run test --filter=./packages/clean
+      - run: pnpm turbo run test -- --affected
+  union-covers-empty-range:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run test --filter='...[HEAD...HEAD]' --filter='*'

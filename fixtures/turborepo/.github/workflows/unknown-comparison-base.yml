@@ -1,0 +1,14 @@
+name: Runtime comparison unavailable to static audit
+on: [pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      TURBO_SCM_BASE: ${{ vars.TEST_COMPARISON_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run test --affected

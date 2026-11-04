@@ -24,7 +24,7 @@ The companion skill [`monorepo-boundaries-cleanup`](skills/monorepo-boundaries-c
 | Package boundaries | Packages that are too large for their consumers (packages no other workspace package imports are never flagged), import through another package's internals, have knip unlisted/unused dependencies, lack Nx enforcement, or have invalid Turbo boundary configuration / reported violations. | `boundaries/deep-import`, `boundaries/nx-missing-module-boundaries-rule`, `boundaries/turbo-package-boundaries-tags`, `boundaries/turbo-tag-package-name-collision`, `boundaries/turbo-boundaries-violation` |
 | Circular dependencies | Package-level cycles and value-import file cycles, one finding per strongly connected group. File cycles are medium when a binding is read during module evaluation, low when every use is deferred, and skipped for idiomatic lazy ORM references. | `circular-deps/package-cycle`, `circular-deps/file-cycle` |
 | Task caching | Nx/Turbo cache configuration that can replay stale results or miss useful cache hits: missing outputs, undeclared env vars, volatile inputs, and dependency-blind test caches. | `caching/missing-outputs`, `caching/undeclared-env`, `caching/build-inputs-include-tests` |
-| CI test coverage | CI paths where tests silently do not run for changed code: no test command, shallow affected checkout, missing Nx base refs, or undeclared workspace dependencies. | `ci-coverage/tests-not-run-in-ci`, `ci-coverage/shallow-checkout-affected`, `ci-coverage/turbo-test-missing-dependson` |
+| CI test coverage | CI paths where tests silently do not run for changed code: no test command, shallow affected checkout, missing Nx base refs, invalid Turbo comparison ranges, or undeclared workspace dependencies. | `ci-coverage/tests-not-run-in-ci`, `ci-coverage/shallow-checkout-affected`, `ci-coverage/turbo-invalid-comparison-base`, `ci-coverage/turbo-test-missing-dependson` |
 | Production leakage | Test files, fixtures, compiled test outputs, or test libraries that can ship in package tarballs or deployable build outputs. | `prod-leakage/test-files-in-package`, `prod-leakage/test-files-in-build-output`, `prod-leakage/test-lib-in-dependencies` |
 
 Findings must be actionable: when the honest fix is "keep it as-is" (for example `cache: false` on a migration task), the skill notes it in the check's reason instead of reporting a finding.
@@ -217,11 +217,15 @@ Fixtures live under `fixtures/` and describe seeded monorepo problems for generi
 
 The caching check includes `caching/nx-cache-disabled` and `caching/turbo-cache-disabled` for deterministic tasks explicitly configured not to cache; deliberately uncached tasks are excluded. The Nx fixture covers shared defaults, executor-key precedence, package targets, project overrides, and deliberate uncached tasks. Fixture contracts can select findings by `id` and optional `package` / `file` / `evidenceIncludes` (an array of required literal substrings, all matched in the finding's evidence); optional `mustNotFind` entries reject false positives at every severity (unlike `cleanPackages`, which allows low-severity findings).
 
+The Turborepo CI fixtures distinguish shallow history from invalid comparison ranges: `invalid-affected-base.yml` compares `HEAD` to itself using env overrides; `invalid-filter-base.yml` uses `[HEAD...HEAD]`, which valid env overrides cannot repair. Both have full history. `valid-comparison-bases.yml` covers automatic PR/push defaults, explicit PR endpoints, non-Git filters, task-argument forwarding, and a union that still selects all packages. `unknown-comparison-base.yml` requires a partial CI-coverage reason, not a speculative invalid-base finding.
+
 Use `scripts/verify-fixture.mjs` to compare a generated report with an expected fixture contract:
 
 ```bash
 node scripts/verify-fixture.mjs "$(node -p 'require("os").tmpdir()')/monorepo-doctor-reports/monorepo-doctor-report.json" fixtures/expected/generic-pnpm.json
 ```
+
+Expected entries accept an optional `file` (matching `location.file`) as well as `package`. Optional `mustNotFind` entries use the same matching rules to reject false positives; the Turbo contract uses them to protect valid defaults and prevent duplicate shallow-history findings. These contracts verify agent-generated reports; the Node tests exercise the verifier, not an automated implementation of the agent's semantic audit.
 
 `npm run check` validates every skill's frontmatter, reference links, and (for monorepo-doctor) finding-id coverage. It should print:
 
