@@ -94,6 +94,87 @@ test('Nx fixture contract requires each shared default and its affected project/
   assert.deepEqual(verify(report([...findings, falsePositive]), exp).unexpected, [falsePositive]);
 });
 
+test('file must match when expected distinguishes invocations of the same rule', () => {
+  const id = 'ci-coverage/turbo-invalid-comparison-base';
+  const f = finding(id, 'high');
+  f.location.file = '.github/workflows/invalid-affected-base.yml';
+  const exp = {
+    cleanPackages: [],
+    mustFind: [
+      { id, file: f.location.file },
+      { id, file: '.github/workflows/invalid-filter-base.yml' },
+    ],
+  };
+  assert.deepEqual(verify(report([f]), exp).missing, [exp.mustFind[1]]);
+});
+
+test('mustNotFind rejects false positives only in the specified file and package', () => {
+  const id = 'ci-coverage/turbo-invalid-comparison-base';
+  const f = finding(id, 'high', '@x/app');
+  const exp = { cleanPackages: [], mustFind: [], mustNotFind: [{ id, file: 'x', package: '@x/app' }] };
+  const r = verify(report([f]), exp);
+  assert.equal(r.ok, false);
+  assert.deepEqual(r.unexpected, [f]);
+  assert.equal(verify(report([f]), { ...exp, mustNotFind: [{ id, file: 'other' }] }).ok, true);
+  assert.equal(verify(report([f]), { ...exp, mustNotFind: [{ id, package: '@x/other' }] }).ok, true);
+  assert.equal(verify(report([f]), { ...exp, mustNotFind: [{ id }] }).ok, false);
+  assert.equal(verify(report([]), exp).ok, true);
+});
+
+test('Turbo fixture contract requires broken invocations, rejects false positives, and requires unknown-base partial status', () => {
+  const exp = JSON.parse(fs.readFileSync(new URL('../fixtures/expected/turborepo.json', import.meta.url), 'utf8'));
+  const positives = exp.mustFind.map((e) => {
+    const f = finding(e.id, 'high', e.package);
+    if (e.file) f.location.file = e.file;
+    return f;
+  });
+  const valid = (findings = positives) => ({
+    ...report(findings),
+    checks: [{ check: 'ci-coverage', status: 'partial', reason: '.github/workflows/unknown-comparison-base.yml: unavailable runtime comparison; TEST_COMPARISON_BASE value unknown' }],
+  });
+  assert.equal(verify(valid(), exp).ok, true);
+  for (const checks of [
+    [],
+    null,
+    [{ check: 'caching', status: 'partial', reason: 'unknown-comparison-base.yml' }],
+    [{ check: 'ci-coverage', status: 'ok', reason: 'unknown-comparison-base.yml' }],
+    [{ check: 'ci-coverage', status: 'partial' }],
+    [{ check: 'ci-coverage', status: 'partial', reason: '' }],
+    [{ check: 'ci-coverage', status: 'partial', reason: '   ' }],
+    [{ check: 'ci-coverage', status: 'partial', reason: {} }],
+    [{ check: 'ci-coverage', status: 'partial', reason: 'unrelated missing tool' }],
+    [{ check: 'ci-coverage', status: 'partial', reason: 'unknown-comparison-base.yml: unrelated missing tool' }],
+    [{ check: 'ci-coverage', status: 'partial', reason: 'unavailable runtime comparison; TEST_COMPARISON_BASE value unknown' }],
+  ]) {
+    const result = verify({ ...valid(), checks }, exp);
+    assert.equal(result.ok, false);
+    assert.ok(result.checkErrors.length > 0);
+    assert.deepEqual(result.missing, []);
+    assert.deepEqual(result.unexpected, []);
+  }
+  const id = 'ci-coverage/turbo-invalid-comparison-base';
+  for (const e of exp.mustFind.filter((e) => e.id === id)) {
+    const incomplete = positives.filter((f) => f.location.file !== e.file);
+    assert.deepEqual(verify(valid(incomplete), exp).missing, [e]);
+  }
+  for (const e of exp.mustNotFind) {
+    const falsePositive = { ...finding(e.id, 'high'), location: { file: e.file } };
+    const r = verify(valid([...positives, falsePositive]), exp);
+    assert.equal(r.ok, false);
+    assert.deepEqual(r.unexpected, [falsePositive]);
+  }
+});
+
+test('check reason selectors require all literal substrings without affecting legacy contracts', () => {
+  const exp = { cleanPackages: [], mustFind: [], checks: [{ check: 'ci-coverage', status: 'partial', reasonIncludes: ['[base]', 'runtime'] }] };
+  const r = { ...report([]), checks: [{ check: 'ci-coverage', status: 'partial', reason: '[base] runtime unavailable' }] };
+  assert.equal(verify(r, exp).ok, true);
+  for (const reason of ['[base]', 'runtime', 'b runtime']) {
+    assert.equal(verify({ ...r, checks: [{ ...r.checks[0], reason }] }, exp).ok, false);
+  }
+  assert.equal(verify(report([]), { cleanPackages: [], mustFind: [] }).ok, true);
+});
+
 test('medium+ findings on clean packages fail; low is allowed', () => {
   const base = [finding('circular-deps/package-cycle', 'high'), finding('boundaries/deep-import', 'medium', '@x/app')];
   assert.equal(verify(report([...base, finding('boundaries/oversized-package', 'low', '@x/clean')]), expected).ok, true);

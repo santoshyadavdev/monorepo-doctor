@@ -1,6 +1,9 @@
 {
   "fixture": "turborepo",
   "cleanPackages": ["@tf/clean"],
+  "checks": [
+    { "check": "ci-coverage", "status": "partial", "reasonIncludes": ["unknown-comparison-base.yml", "unavailable runtime comparison"] }
+  ],
   "mustFind": [
     { "id": "boundaries/turbo-package-boundaries-tags", "package": "@tf/web" },
     { "id": "boundaries/turbo-tag-package-name-collision", "package": "@tf/web" },
@@ -9,6 +12,17 @@
     { "id": "caching/undeclared-env", "package": "@tf/web" },
     { "id": "caching/turbo-cache-disabled" },
     { "id": "ci-coverage/turbo-test-missing-dependson" },
-    { "id": "ci-coverage/shallow-checkout-affected" }
+    { "id": "ci-coverage/shallow-checkout-affected" },
+    { "id": "ci-coverage/turbo-invalid-comparison-base", "file": ".github/workflows/invalid-affected-base.yml" },
+    { "id": "ci-coverage/turbo-invalid-comparison-base", "file": ".github/workflows/invalid-filter-base.yml" }
+  ],
+  "mustNotFind": [
+    { "id": "ci-coverage/turbo-invalid-comparison-base", "file": ".github/workflows/ci.yml" },
+    { "id": "ci-coverage/turbo-invalid-comparison-base", "file": ".github/workflows/valid-comparison-bases.yml" },
+    { "id": "ci-coverage/turbo-invalid-comparison-base", "file": ".github/workflows/unknown-comparison-base.yml" },
+    { "id": "ci-coverage/shallow-checkout-affected", "file": ".github/workflows/invalid-affected-base.yml" },
+    { "id": "ci-coverage/shallow-checkout-affected", "file": ".github/workflows/invalid-filter-base.yml" },
+    { "id": "ci-coverage/shallow-checkout-affected", "file": ".github/workflows/valid-comparison-bases.yml" },
+    { "id": "ci-coverage/shallow-checkout-affected", "file": ".github/workflows/unknown-comparison-base.yml" }
   ]
 }

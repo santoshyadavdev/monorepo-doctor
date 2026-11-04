@@ -76,3 +76,9 @@ This example doesn't install dependencies, so the knip, Nx graph and Turbo dry-r
 ## Threshold values
 
 `low`, `medium`, `high` or `critical`. A finding fails the job when its severity is at or above the threshold. See the [severity rubric](/skills/monorepo-doctor/#output).
+
+## Turbo affected comparisons
+
+The audit accepts Turborepo's documented `--affected` defaults, including GitHub Actions PR and push base detection. You do not need to add `TURBO_SCM_BASE` merely to satisfy the audit. The high-severity `ci-coverage/turbo-invalid-comparison-base` finding requires evidence of a broken comparison, such as comparing a clean checkout's `HEAD` to itself.
+
+`TURBO_SCM_BASE` and `TURBO_SCM_HEAD` configure `--affected`; they do not repair an explicit `--filter='...[base...head]'` range. Fix that range's endpoints instead. Unknown runtime values make the comparison audit partial, not a finding. Missing history remains a separate `ci-coverage/shallow-checkout-affected` issue: `--affected` falls back to treating all packages as changed when history cannot be resolved, while explicit Git filters can fail.

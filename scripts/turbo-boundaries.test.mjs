@@ -99,6 +99,10 @@ test('Turbo fixture produces both expected configuration findings without flaggi
     summary: { critical: 0, high: 0, medium: 2, low: 0 },
     findings: findings.map((f) => ({ ...f, check: 'boundaries' })),
   };
-  const result = verify(report, { ...expected, mustFind: expected.mustFind.filter((f) => f.id.startsWith('boundaries/')) });
-  assert.deepEqual(result, { missing: [], cleanViolations: [], schemaErrors: [], ok: true });
+  const result = verify(report, {
+    ...expected, checks: [],
+    mustFind: expected.mustFind.filter((f) => f.id.startsWith('boundaries/')),
+    mustNotFind: (expected.mustNotFind ?? []).filter((f) => f.id.startsWith('boundaries/')),
+  });
+  assert.deepEqual(result, { missing: [], unexpected: [], cleanViolations: [], schemaErrors: [], checkErrors: [], ok: true });
 });
