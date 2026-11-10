@@ -10,6 +10,10 @@ hero:
     - text: Get started
       link: /getting-started/
       icon: right-arrow
+    - text: Copy-paste prompts
+      link: /prompts/packages-depending-on-apps/
+      icon: pencil
+      variant: secondary
     - text: For agents (llms.txt)
       link: /for-agents/
       icon: document
@@ -60,4 +64,15 @@ npx skills add santoshyadavdev/monorepo-doctor
 <CardGrid>
   <LinkCard title="monorepo-doctor" href="/skills/monorepo-doctor/" description="What it checks, how it works, and what it guarantees." />
   <LinkCard title="monorepo-boundaries-cleanup" href="/skills/monorepo-boundaries-cleanup/" description="Rules and workflow for paying down violations." />
+</CardGrid>
+
+## Copy-paste prompts
+
+Ready-made prompts for common boundary problems. The first three audit and report. The last one fixes a single finding in a small PR.
+
+<CardGrid>
+  <LinkCard title="Find packages that depend on apps" href="/prompts/packages-depending-on-apps/" description="Shared packages that import apps or services, grouped by root cause and measured with turbo dry runs." />
+  <LinkCard title="Find convenience re-exports" href="/prompts/convenience-re-exports/" description="Re-exports that forward symbols from other packages, classified as keep, remove, or defer." />
+  <LinkCard title="Find leftover compatibility shims" href="/prompts/compatibility-shims/" description="Re-export shims and barrels left by earlier extractions, with their remaining importers." />
+  <LinkCard title="Fix one audit item" href="/prompts/fix-one-audit-item/" description="Turn one finding into a small, validated draft PR with a measured build-graph improvement." />
 </CardGrid>
