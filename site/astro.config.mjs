@@ -27,7 +27,7 @@ export default defineConfig({
       sidebar: [
         { label: 'Start here', items: ['getting-started', 'for-agents'] },
         { label: 'Skills', items: ['skills/monorepo-doctor', 'skills/monorepo-boundaries-cleanup'] },
-        { label: 'Guides', items: ['guides/ci', 'guides/caching-and-stale-results', 'guides/doctor-to-cleanup'] },
+        { label: 'Guides', items: ['guides/ci', 'guides/caching-and-stale-results', 'guides/doctor-to-cleanup', 'guides/packages-depending-on-apps', 'guides/convenience-re-exports', 'guides/compatibility-shims', 'guides/fix-one-audit-item'] },
         {
           label: 'Reference',
           items: [
