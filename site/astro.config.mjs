@@ -5,6 +5,12 @@ import starlightLlmsTxt from 'starlight-llms-txt';
 
 export default defineConfig({
   site: 'https://monorepo-skills.dev',
+  redirects: {
+    '/guides/packages-depending-on-apps': '/prompts/packages-depending-on-apps/',
+    '/guides/convenience-re-exports': '/prompts/convenience-re-exports/',
+    '/guides/compatibility-shims': '/prompts/compatibility-shims/',
+    '/guides/fix-one-audit-item': '/prompts/fix-one-audit-item/',
+  },
   integrations: [
     starlight({
       title: 'Monorepo Skills',
@@ -27,7 +33,16 @@ export default defineConfig({
       sidebar: [
         { label: 'Start here', items: ['getting-started', 'for-agents'] },
         { label: 'Skills', items: ['skills/monorepo-doctor', 'skills/monorepo-boundaries-cleanup'] },
-        { label: 'Guides', items: ['guides/ci', 'guides/caching-and-stale-results', 'guides/doctor-to-cleanup', 'guides/packages-depending-on-apps', 'guides/convenience-re-exports', 'guides/compatibility-shims', 'guides/fix-one-audit-item'] },
+        { label: 'Guides', items: ['guides/ci', 'guides/caching-and-stale-results', 'guides/doctor-to-cleanup'] },
+        {
+          label: 'Prompts',
+          items: [
+            'prompts/packages-depending-on-apps',
+            'prompts/convenience-re-exports',
+            'prompts/compatibility-shims',
+            'prompts/fix-one-audit-item',
+          ],
+        },
         {
           label: 'Reference',
           items: [

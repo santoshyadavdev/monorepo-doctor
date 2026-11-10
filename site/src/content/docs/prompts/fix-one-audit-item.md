@@ -3,7 +3,7 @@ title: Fix one audit item
 description: An implementation prompt that takes a single item from one of the audit prompts and turns it into a small, validated draft PR with a measured build-graph improvement.
 ---
 
-The audit guides ([packages that depend on apps](/guides/packages-depending-on-apps/), [convenience re-exports](/guides/convenience-re-exports/), [leftover compatibility shims](/guides/compatibility-shims/)) only report findings. This prompt fixes one of them. Paste it into your agent, replacing `<one item from the audit>` with a single row or group from an audit result and `<pkg>` with the affected package.
+The audit guides ([packages that depend on apps](/prompts/packages-depending-on-apps/), [convenience re-exports](/prompts/convenience-re-exports/), [leftover compatibility shims](/prompts/compatibility-shims/)) only report findings. This prompt fixes one of them. Paste it into your agent, replacing `<one item from the audit>` with a single row or group from an audit result and `<pkg>` with the affected package.
 
 Unlike the audits, this prompt **edits code, installs dependencies, and opens a PR**.
 
