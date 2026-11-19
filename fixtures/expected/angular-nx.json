@@ -1,0 +1,27 @@
+{
+  "fixture": "angular-nx",
+  "cleanPackages": ["test-utils"],
+  "mustFind": [
+    { "id": "boundaries/deep-import", "package": "storefront" },
+    { "id": "boundaries/nx-missing-module-boundaries-rule" },
+    { "id": "boundaries/nx-untagged-project", "package": "data" },
+    { "id": "circular-deps/file-cycle", "package": "data" },
+    { "id": "caching/missing-outputs", "package": "utils" },
+    { "id": "caching/build-inputs-include-tests" },
+    { "id": "caching/nx-cache-disabled", "file": "nx.json", "evidenceIncludes": ["targetDefaults.typecheck"] },
+    { "id": "ci-coverage/nx-test-inputs-ignore-deps" },
+    { "id": "ci-coverage/nx-affected-base-missing" },
+    { "id": "prod-leakage/build-tsconfig-includes-tests", "package": "utils" }
+  ],
+  "mustNotFind": [
+    { "id": "circular-deps/package-cycle" },
+    { "id": "boundaries/nx-permissive-module-boundaries" },
+    { "id": "boundaries/nx-untagged-project", "package": "ui" },
+    { "id": "caching/nx-cache-disabled", "evidenceIncludes": [":serve"] },
+    { "id": "ci-coverage/shallow-checkout-affected" },
+    { "id": "ci-coverage/tests-not-run-in-ci" },
+    { "id": "ci-coverage/missing-test-script" },
+    { "id": "prod-leakage/build-tsconfig-includes-tests", "package": "storefront" },
+    { "id": "prod-leakage/build-tsconfig-includes-tests", "package": "admin" }
+  ]
+}

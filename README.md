@@ -231,6 +231,19 @@ leakage problems while remaining runnable. Its README includes setup, audit
 prompts, suggested repairs, and a report-verification command using
 [`fixtures/expected/react-turbo.json`](fixtures/expected/react-turbo.json).
 
+### Runnable Angular + Nx sample
+
+[`examples/angular-nx`](examples/angular-nx/) is an integrated Nx workspace with
+two Angular apps (storefront and admin) and four libraries defined by
+`project.json` files and `tsconfig.base.json` path aliases. It intentionally
+seeds Nx-specific problems: a relative deep import, missing module-boundary
+enforcement and an untagged project, a file cycle, missing build outputs, no
+`production` named input, disabled typecheck caching, dependency-blind test
+inputs, an `nx affected` run without a base, and a build tsconfig that compiles
+specs. Its README includes setup, suggested repairs, and a report-verification
+command using
+[`fixtures/expected/angular-nx.json`](fixtures/expected/angular-nx.json).
+
 Run the tooling with Node ≥ 22.5:
 
 ```bash

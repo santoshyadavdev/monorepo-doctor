@@ -42,7 +42,7 @@ npx skills add santoshyadavdev/monorepo-doctor --skill monorepo-boundaries-clean
 
 ## Example workspace
 
-For a reproducible audit, the repository's [React + Turborepo example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/react-turbo) contains two React apps and four libraries with intentional findings across all five doctor checks. See [Getting started](/getting-started/#try-the-react-and-turborepo-example) for setup, an audit prompt and report verification. Run the audit from the example workspace root; do not install dependencies, build or run tests as part of the read-only audit.
+For a reproducible audit, the repository's [React + Turborepo example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/react-turbo) contains two React apps and four libraries with intentional findings across all five doctor checks. See [Getting started](/getting-started/#try-the-react-and-turborepo-example) for setup, an audit prompt and report verification. The [Angular + Nx example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/angular-nx) does the same for an integrated Nx workspace (two Angular apps, four `project.json` libraries); see [Getting started](/getting-started/#try-the-angular-and-nx-example). Run the audit from the example workspace root; do not install dependencies, build or run tests as part of the read-only audit.
 
 ## When to use which skill
 
