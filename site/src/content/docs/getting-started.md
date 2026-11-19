@@ -60,6 +60,38 @@ The agent finishes with a summary and the paths to `monorepo-doctor-report.md` a
 The audit works on a fresh clone, but `knip`, `publint`, Nx graph refreshes and Turbo dry runs need `node_modules` with those tools installed locally. The skill doesn't download them unless you explicitly allow downloads in your prompt. Without them, the affected checks are reported as `partial` with a reason — never silently skipped.
 :::
 
+## Try the React and Turborepo example
+
+The [React + Turborepo example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/react-turbo) is a runnable npm workspace with two React apps and four shared libraries. It intentionally contains boundary, file-cycle, caching, CI test-cache and production-leakage problems for teams to investigate. It is an audit playground, **not a production template**.
+
+Clone the repository and prepare the example (Node ≥ 22.5 and npm 10):
+
+```bash
+git clone https://github.com/santoshyadavdev/monorepo-doctor.git
+cd monorepo-doctor/examples/react-turbo
+npm ci
+npm test
+npm run build
+```
+
+After [installing the skill](#install), start your agent in `examples/react-turbo` and ask:
+
+```text
+Run monorepo-doctor on this workspace. Write reports to the default report directory.
+```
+
+The audit itself does not install dependencies, build or run tests. You can audit without installing; Turbo inspection will be partial. Knip and publint are not included in the example, so their optional inspections remain partial.
+
+From the repository root, compare the generated JSON report against the example's expected findings:
+
+```bash
+node scripts/verify-fixture.mjs \
+  "$(node -p 'require("os").tmpdir()')/monorepo-doctor-reports/monorepo-doctor-report.json" \
+  fixtures/expected/react-turbo.json
+```
+
+The [example README](https://github.com/santoshyadavdev/monorepo-doctor/blob/master/examples/react-turbo/README.md) lists the seeded findings, suggested repairs and commands to run the apps. The verifier checks an agent-generated report; it does not run the audit. Copy the example to a separate repository before experimenting with fixes, and do not publish its sample packages.
+
 ## Fix what it found
 
 When the report shows boundary violations, hand them to the cleanup skill one batch at a time:

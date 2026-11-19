@@ -1,0 +1,17 @@
+{
+  "name": "react-turbo-example",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@10.9.2",
+  "engines": { "node": ">=22.5" },
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "2.5.0",
+    "vite": "^6.4.1"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@sample/data",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.js",
+  "scripts": { "test": "node --test src/*.test.js" },
+  "dependencies": { "@sample/utils": "*" }
+}

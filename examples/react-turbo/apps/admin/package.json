@@ -1,0 +1,19 @@
+{
+  "name": "@sample/admin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5174 --strictPort",
+    "build": "vite build",
+    "test": "node --test src/*.test.js"
+  },
+  "dependencies": {
+    "@sample/data": "*",
+    "@sample/ui": "*",
+    "@sample/utils": "*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": { "@sample/test-utils": "*" }
+}
