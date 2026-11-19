@@ -37,7 +37,7 @@ export default defineConfig({
           description:
             'Two agent skills for JS/TS monorepos (npm, yarn, pnpm, bun workspaces; Nx; Turborepo). monorepo-doctor is a read-only audit that writes Markdown and JSON reports. monorepo-boundaries-cleanup is a refactoring workflow that removes boundary violations in small PRs against a baseline.',
           details:
-            'Raw skill files are served at /skills/<skill>/SKILL.md and /skills/monorepo-doctor/references/<file>.md. Install with `npx skills add santoshyadavdev/monorepo-doctor --skill <skill>`.',
+            'Raw skill files are served at /skills/<skill>/SKILL.md and /skills/monorepo-doctor/references/<file>.md. Install with `npx skills add santoshyadavdev/monorepo-doctor --skill <skill>`. Try the intentionally broken React + Turborepo audit example at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/react-turbo; setup and report verification are documented at https://monorepo-skills.dev/getting-started/#try-the-react-and-turborepo-example.',
           promote: ['index*', 'getting-started', 'for-agents', 'skills/**'],
         }),
       ],

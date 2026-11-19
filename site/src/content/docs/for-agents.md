@@ -39,6 +39,10 @@ npx skills add santoshyadavdev/monorepo-doctor --skill monorepo-doctor
 npx skills add santoshyadavdev/monorepo-doctor --skill monorepo-boundaries-cleanup
 ```
 
+## Example workspace
+
+For a reproducible audit, the repository's [React + Turborepo example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/react-turbo) contains two React apps and four libraries with intentional findings across all five doctor checks. See [Getting started](/getting-started/#try-the-react-and-turborepo-example) for setup, an audit prompt and report verification. Run the audit from the example workspace root; do not install dependencies, build or run tests as part of the read-only audit.
+
 ## When to use which skill
 
 - **monorepo-doctor** — the user asks for a monorepo audit or health check, or reports Nx/Turborepo cache problems, affected tests not running, circular dependencies, package boundary drift, or test code shipped to production. It is read-only: never install, build, run tests or edit files while following it.
