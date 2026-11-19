@@ -96,6 +96,8 @@ The [example README](https://github.com/santoshyadavdev/monorepo-doctor/blob/mas
 
 The [Angular + Nx example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/angular-nx) is a runnable integrated Nx workspace with two Angular apps and four libraries, wired through `project.json` files and `tsconfig.base.json` path aliases. It intentionally contains Nx-specific boundary, file-cycle, caching, affected-CI and build-tsconfig problems. Like the React example, it is an audit playground, **not a production template**.
 
+Use Node.js 22.12 or later on the 22.x release line, or Node.js 24.x, and npm 10 or later.
+
 ```bash
 cd monorepo-doctor/examples/angular-nx
 npm ci

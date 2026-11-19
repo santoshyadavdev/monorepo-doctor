@@ -27,7 +27,8 @@ yet load Angular 22's builder packages.
 
 ## Run it
 
-Use Node >= 22.5 and npm 10 or later. From this directory:
+Use Node.js 22.12 or later on the 22.x release line, or Node.js 24.x, and npm
+10 or later. From this directory:
 
 ```bash
 npm ci
