@@ -92,6 +92,27 @@ node scripts/verify-fixture.mjs \
 
 The [example README](https://github.com/santoshyadavdev/monorepo-doctor/blob/master/examples/react-turbo/README.md) lists the seeded findings, suggested repairs and commands to run the apps. The verifier checks an agent-generated report; it does not run the audit. Copy the example to a separate repository before experimenting with fixes, and do not publish its sample packages.
 
+## Try the Angular and Nx example
+
+The [Angular + Nx example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/angular-nx) is a runnable integrated Nx workspace with two Angular apps and four libraries, wired through `project.json` files and `tsconfig.base.json` path aliases. It intentionally contains Nx-specific boundary, file-cycle, caching, affected-CI and build-tsconfig problems. Like the React example, it is an audit playground, **not a production template**.
+
+```bash
+cd monorepo-doctor/examples/angular-nx
+npm ci
+npm test
+npm run build
+```
+
+Start your agent in `examples/angular-nx` and use the same audit prompt. Without `npm ci`, Nx graph inspection is partial. From the repository root, verify the report against its contract:
+
+```bash
+node scripts/verify-fixture.mjs \
+  "$(node -p 'require("os").tmpdir()')/monorepo-doctor-reports/monorepo-doctor-report.json" \
+  fixtures/expected/angular-nx.json
+```
+
+The [example README](https://github.com/santoshyadavdev/monorepo-doctor/blob/master/examples/angular-nx/README.md) lists the seeded findings, suggested repairs, negative controls and commands to serve both apps.
+
 ## Fix what it found
 
 When the report shows boundary violations, hand them to the cleanup skill one batch at a time:

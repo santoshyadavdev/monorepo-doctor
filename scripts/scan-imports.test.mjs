@@ -81,11 +81,8 @@ test('scanner import logic drops pure type-only imports', () => {
   assert.equal(specs.length, 0, 'scanner loop should drop pure type-only imports');
 });
 
-test('React Turbo example exposes its seeded deep import and file cycle without a package cycle', () => {
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'react-turbo-scan-'));
-  const work = path.join(temp, 'work');
-  const example = path.join(root, 'examples', 'react-turbo');
-  const runSnippet = (reference, script) => {
+function runSkillSnippets(example, work) {
+  for (const [reference, script] of [['detection.md', 'detect.mjs'], ['scan.md', 'scan.mjs'], ['circular-deps.md', 'cycles.mjs']]) {
     const markdown = fs.readFileSync(path.join(root, 'skills', 'monorepo-doctor', 'references', reference), 'utf8');
     const marker = `cat > "$W/${script}" <<'EOF'\n`;
     const start = markdown.indexOf(marker);
@@ -95,11 +92,15 @@ test('React Turbo example exposes its seeded deep import and file cycle without 
     const code = markdown.slice(start + marker.length, end)
       .replace("const work = path.join(os.tmpdir(), 'monorepo-doctor');", `const work = ${JSON.stringify(work)};`);
     execFileSync(process.execPath, ['--input-type=module', '-e', code], { cwd: example });
-  };
+  }
+}
+
+test('React Turbo example exposes its seeded deep import and file cycle without a package cycle', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'react-turbo-scan-'));
+  const work = path.join(temp, 'work');
+  const example = path.join(root, 'examples', 'react-turbo');
   try {
-    runSnippet('detection.md', 'detect.mjs');
-    runSnippet('scan.md', 'scan.mjs');
-    runSnippet('circular-deps.md', 'cycles.mjs');
+    runSkillSnippets(example, work);
     const workspace = JSON.parse(fs.readFileSync(path.join(work, 'workspace.json'), 'utf8'));
     const scan = JSON.parse(fs.readFileSync(path.join(work, 'scan.json'), 'utf8'));
     const cycles = JSON.parse(fs.readFileSync(path.join(work, 'findings', 'circular-deps.json'), 'utf8'));
@@ -121,3 +122,35 @@ test('React Turbo example exposes its seeded deep import and file cycle without 
   }
 });
 
+
+test('Angular Nx example exposes its seeded deep import and file cycle without a package cycle', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'angular-nx-scan-'));
+  const work = path.join(temp, 'work');
+  const example = path.join(root, 'examples', 'angular-nx');
+  try {
+    runSkillSnippets(example, work);
+    const workspace = JSON.parse(fs.readFileSync(path.join(work, 'workspace.json'), 'utf8'));
+    const scan = JSON.parse(fs.readFileSync(path.join(work, 'scan.json'), 'utf8'));
+    const cycles = JSON.parse(fs.readFileSync(path.join(work, 'findings', 'circular-deps.json'), 'utf8'));
+
+    assert.deepEqual(workspace.orchestrators.map((o) => o.name), ['nx']);
+    assert.deepEqual(workspace.packages.map((p) => [p.name, p.source]).sort(), [
+      ['admin', 'project.json'], ['data', 'project.json'], ['storefront', 'project.json'],
+      ['test-utils', 'project.json'], ['ui', 'project.json'], ['utils', 'project.json'],
+    ]);
+    assert.deepEqual(workspace.packages.filter((p) => !p.tags.length).map((p) => p.name), ['data']);
+    assert.deepEqual(workspace.ciFiles, ['.github/workflows/ci.yml']);
+    assert.deepEqual(scan.imports.filter((entry) => entry.deep).map((entry) => ({
+      from: entry.from, target: entry.target, kind: entry.kind,
+    })), [{ from: 'storefront', target: 'data', kind: 'relative' }]);
+    assert.ok(scan.imports.some((entry) => entry.kind === 'alias' && entry.from === 'admin' && entry.target === 'utils' && !entry.deep));
+    assert.deepEqual(cycles.findings.map((finding) => ({
+      id: finding.id, package: finding.location.package,
+    })), [{ id: 'circular-deps/file-cycle', package: 'data' }]);
+    assert.ok(cycles.findings[0].evidence.includes('libs/data/src/lib/catalog.ts'));
+    assert.ok(cycles.findings[0].evidence.includes('libs/data/src/lib/inventory.ts'));
+    assert.ok(scan.packages.utils.testFiles.includes('libs/utils/src/lib/price.spec.ts'));
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});

@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc/utils",
+    "rootDir": "src",
+    "module": "es2022",
+    "declaration": true,
+    "importHelpers": false,
+    "types": []
+  },
+  "include": ["src/**/*.ts"]
+}

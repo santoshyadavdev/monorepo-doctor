@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "pluginsConfig": {
+    "@nx/js": { "analyzeSourceFiles": true }
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "sharedGlobals": ["{workspaceRoot}/tsconfig.base.json"]
+  },
+  "targetDefaults": {
+    "build": { "cache": true, "dependsOn": ["^build"] },
+    "test": { "cache": true, "inputs": ["default"] },
+    "typecheck": { "cache": false },
+    "serve": { "cache": false, "continuous": true }
+  }
+}
