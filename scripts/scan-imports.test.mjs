@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -77,5 +79,45 @@ test('scanner import logic drops pure type-only imports', () => {
   const specs = extractSpecsFromScanMd(code);
 
   assert.equal(specs.length, 0, 'scanner loop should drop pure type-only imports');
+});
+
+test('React Turbo example exposes its seeded deep import and file cycle without a package cycle', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'react-turbo-scan-'));
+  const work = path.join(temp, 'work');
+  const example = path.join(root, 'examples', 'react-turbo');
+  const runSnippet = (reference, script) => {
+    const markdown = fs.readFileSync(path.join(root, 'skills', 'monorepo-doctor', 'references', reference), 'utf8');
+    const marker = `cat > "$W/${script}" <<'EOF'\n`;
+    const start = markdown.indexOf(marker);
+    assert.notEqual(start, -1, `${script} snippet must exist`);
+    const end = markdown.indexOf('\nEOF', start + marker.length);
+    assert.notEqual(end, -1, `${script} snippet must terminate`);
+    const code = markdown.slice(start + marker.length, end)
+      .replace("const work = path.join(os.tmpdir(), 'monorepo-doctor');", `const work = ${JSON.stringify(work)};`);
+    execFileSync(process.execPath, ['--input-type=module', '-e', code], { cwd: example });
+  };
+  try {
+    runSnippet('detection.md', 'detect.mjs');
+    runSnippet('scan.md', 'scan.mjs');
+    runSnippet('circular-deps.md', 'cycles.mjs');
+    const workspace = JSON.parse(fs.readFileSync(path.join(work, 'workspace.json'), 'utf8'));
+    const scan = JSON.parse(fs.readFileSync(path.join(work, 'scan.json'), 'utf8'));
+    const cycles = JSON.parse(fs.readFileSync(path.join(work, 'findings', 'circular-deps.json'), 'utf8'));
+
+    assert.equal(workspace.packages.length, 6);
+    assert.deepEqual(workspace.ciFiles, ['.github/workflows/ci.yml']);
+    assert.deepEqual(scan.imports.filter((entry) => entry.deep).map((entry) => ({
+      from: entry.from, target: entry.target, declared: entry.declared,
+    })), [{ from: '@sample/storefront', target: '@sample/data', declared: true }]);
+    assert.deepEqual(scan.imports.filter((entry) => !entry.declared), []);
+    assert.deepEqual(cycles.findings.map((finding) => ({
+      id: finding.id, package: finding.location.package,
+    })), [{ id: 'circular-deps/file-cycle', package: '@sample/utils' }]);
+    assert.ok(cycles.findings[0].evidence.includes('packages/utils/src/labels.js'));
+    assert.ok(cycles.findings[0].evidence.includes('packages/utils/src/normalize.js'));
+    assert.ok(scan.packages['@sample/utils'].testFiles.includes('packages/utils/src/index.test.js'));
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
 });
 

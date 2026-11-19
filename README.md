@@ -222,6 +222,15 @@ What this skill adds is one read-only audit flow across all five concerns, with 
 
 ## Development
 
+### Runnable React + Turborepo sample
+
+[`examples/react-turbo`](examples/react-turbo/) contains two React apps
+(storefront and admin) and four shared libraries using npm workspaces and Turbo.
+It intentionally seeds boundary, file-cycle, caching, CI test-cache, and package
+leakage problems while remaining runnable. Its README includes setup, audit
+prompts, suggested repairs, and a report-verification command using
+[`fixtures/expected/react-turbo.json`](fixtures/expected/react-turbo.json).
+
 Run the tooling with Node ≥ 22.5:
 
 ```bash

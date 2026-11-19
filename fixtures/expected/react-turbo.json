@@ -1,0 +1,19 @@
+{
+  "fixture": "react-turbo",
+  "cleanPackages": ["@sample/test-utils"],
+  "mustFind": [
+    { "id": "boundaries/deep-import", "package": "@sample/storefront" },
+    { "id": "circular-deps/file-cycle", "package": "@sample/utils" },
+    { "id": "caching/missing-outputs", "file": "turbo.json" },
+    { "id": "caching/build-inputs-include-tests", "file": "turbo.json" },
+    { "id": "ci-coverage/turbo-test-missing-dependson", "file": "turbo.json" },
+    { "id": "prod-leakage/test-files-in-package", "package": "@sample/utils" }
+  ],
+  "mustNotFind": [
+    { "id": "circular-deps/package-cycle" },
+    { "id": "ci-coverage/undeclared-workspace-dependency" },
+    { "id": "ci-coverage/missing-test-script" },
+    { "id": "ci-coverage/tests-not-run-in-ci" },
+    { "id": "caching/turbo-cache-disabled" }
+  ]
+}
