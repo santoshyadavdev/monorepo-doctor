@@ -1,0 +1,7 @@
+# Monorepo Skills
+
+For the generated documentation index and links to the complete agent documentation, see:
+
+- https://monorepo-skills.dev/llms.txt
+- https://monorepo-skills.dev/llms-small.txt
+- https://monorepo-skills.dev/llms-full.txt

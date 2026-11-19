@@ -12,6 +12,7 @@ This site is built for both people and agents. If you are an agent, prefer the p
 | [`/llms.txt`](/llms.txt) | Entry point describing the project and linking to the doc sets below |
 | [`/llms-small.txt`](/llms-small.txt) | Condensed docs for small context windows |
 | [`/llms-full.txt`](/llms-full.txt) | Every page as one Markdown document |
+| [`/llm.txt`](/llm.txt) | Short alias linking to the generated documentation index |
 
 ## Raw skill files
 
