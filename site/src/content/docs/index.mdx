@@ -60,8 +60,10 @@ npx skills add santoshyadavdev/monorepo-doctor
   </Card>
   <Card title="Bazel" icon="magnifier">
     Limited static checks for public `internal`-tagged targets and
-    `production`-tagged targets depending on `testonly` targets, including in
-    standalone Java workspaces. Coverage is always partial: Java source, Bazel
+    `production`-tagged targets with explicit `testonly = False` that depend on
+    `testonly = True` targets. Production targets that omit `testonly` are not
+    covered by the latter check. These checks include standalone Java workspaces.
+    Coverage is always partial: Java source, Bazel
     caching and Bazel CI coverage are not analyzed. See the [Bazel reference](/reference/monorepo-doctor/bazel/).
   </Card>
 </CardGrid>
