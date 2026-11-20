@@ -1,0 +1,6 @@
+filegroup(
+    name = "catalog_fixture",
+    srcs = ["catalog.txt"],
+    testonly = True,
+    visibility = ["//apps/catalog:__pkg__"],
+)

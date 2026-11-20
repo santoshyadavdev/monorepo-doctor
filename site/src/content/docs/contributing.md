@@ -12,7 +12,7 @@ npm test        # unit tests for the scripts
 npm run check   # frontmatter, reference links and finding-id coverage for every skill
 ```
 
-Fixtures under `fixtures/` seed known problems into generic pnpm, Nx and Turborepo workspaces; expected findings live in `fixtures/expected/*.json`. Compare a generated report against a fixture contract with:
+Fixtures under `fixtures/` seed known problems into generic pnpm, Nx, Turborepo and Bazel workspaces; expected findings live in `fixtures/expected/*.json`. Runnable Bazel JS and standalone Java examples live under `examples/bazel-rules-js/` and `examples/bazel-java/`. Compare a generated report against a fixture contract with:
 
 ```bash
 node scripts/verify-fixture.mjs "$(node -p 'require("os").tmpdir()')/monorepo-doctor-reports/monorepo-doctor-report.json" fixtures/expected/generic-pnpm.json

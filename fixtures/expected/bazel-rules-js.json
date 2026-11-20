@@ -1,0 +1,14 @@
+{
+  "fixture": "bazel-rules-js",
+  "cleanPackages": ["@sample/test-utils"],
+  "mustFind": [
+    { "id": "boundaries/deep-import", "package": "@sample/storefront" },
+    { "id": "boundaries/bazel-public-internal-target", "package": "@sample/math-core", "evidenceIncludes": ["//packages/math-core:rounding_internal", "//visibility:public"] },
+    { "id": "prod-leakage/bazel-testonly-dependency", "package": "@sample/storefront", "file": "apps/storefront/BUILD.bazel", "evidenceIncludes": ["//apps/storefront:release_bundle", "//packages/test-utils:catalog_fixtures"] }
+  ],
+  "mustNotFind": [],
+  "checks": [
+    { "check": "boundaries", "status": "partial" },
+    { "check": "prod-leakage", "status": "partial" }
+  ]
+}

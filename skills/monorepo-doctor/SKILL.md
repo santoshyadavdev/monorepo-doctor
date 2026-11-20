@@ -1,11 +1,14 @@
 ---
 name: monorepo-doctor
-description: Use when a user asks for a JS/TS monorepo audit, monorepo health check, Nx/Turborepo cache issues, affected tests not running, circular dependencies, package boundary drift, or test code shipped to production. Read-only; writes Markdown and JSON reports.
+description: Use when a user asks for a JS/TS monorepo audit, or Bazel target visibility or testonly issues in a JS or Java workspace. Also covers Nx/Turborepo caching, affected tests, cycles and production test leakage. Read-only; writes Markdown and JSON reports.
 ---
 
 # Monorepo Doctor
 
-Audit a JS/TS monorepo for five classes of problems that teams routinely miss, and produce an evidence-backed report.
+Audit a JS/TS monorepo for five classes of problems that teams routinely miss,
+or run the limited Bazel target checks in a standalone Bazel workspace, and
+produce an evidence-backed report. Bazel-only support does not analyze Java
+source, cycles, caching, or CI test coverage.
 
 Prerequisites: Node ≥ 22.5. The work dir is `$W` = `$(node -p 'require("os").tmpdir()')/monorepo-doctor` (see detection.md).
 
@@ -23,9 +26,9 @@ Prerequisites: Node ≥ 22.5. The work dir is `$W` = `$(node -p 'require("os").t
 ## Workflow
 
 1. **Detect** — follow [references/detection.md](references/detection.md). Stop if `NO_WORKSPACE`.
-2. **Scan** — follow [references/scan.md](references/scan.md).
+2. **Scan** — follow [references/scan.md](references/scan.md). If Bazel is detected, also run the static inspection in [references/bazel.md](references/bazel.md) before the checks.
 3. **Check** — run all five unless the user asked for a subset (write `{"status":"not-run","reason":"not requested","findings":[]}` to `$W/findings/<check>.json` for the others):
-   - [references/boundaries.md](references/boundaries.md) — package split & public API
+   - [references/boundaries.md](references/boundaries.md) — package split & public API, including Bazel visibility
    - [references/circular-deps.md](references/circular-deps.md) — package and file cycles
    - [references/caching.md](references/caching.md) — Nx / Turborepo cache correctness
    - [references/ci-coverage.md](references/ci-coverage.md) — tests that silently don't run in CI

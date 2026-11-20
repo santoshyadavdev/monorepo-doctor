@@ -5,6 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { verify } from './verify-fixture.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const scanMd = fs.readFileSync(path.join(root, 'skills', 'monorepo-doctor', 'references', 'scan.md'), 'utf8');
@@ -82,7 +83,7 @@ test('scanner import logic drops pure type-only imports', () => {
 });
 
 function runSkillSnippets(example, work) {
-  for (const [reference, script] of [['detection.md', 'detect.mjs'], ['scan.md', 'scan.mjs'], ['circular-deps.md', 'cycles.mjs']]) {
+  function run(reference, script) {
     const markdown = fs.readFileSync(path.join(root, 'skills', 'monorepo-doctor', 'references', reference), 'utf8');
     const marker = `cat > "$W/${script}" <<'EOF'\n`;
     const start = markdown.indexOf(marker);
@@ -93,6 +94,29 @@ function runSkillSnippets(example, work) {
       .replace("const work = path.join(os.tmpdir(), 'monorepo-doctor');", `const work = ${JSON.stringify(work)};`);
     execFileSync(process.execPath, ['--input-type=module', '-e', code], { cwd: example });
   }
+  run('detection.md', 'detect.mjs');
+  run('scan.md', 'scan.mjs');
+  const workspace = JSON.parse(fs.readFileSync(path.join(work, 'workspace.json'), 'utf8'));
+  if (workspace.orchestrators.some((o) => o.name === 'bazel')) run('bazel.md', 'bazel-audit.mjs');
+  run('circular-deps.md', 'cycles.mjs');
+}
+
+function verifyBazelContract(bazel, expected, otherChecks = []) {
+  const findings = ['boundaries', 'prod-leakage'].flatMap((check) =>
+    bazel[check].findings.map((finding) => ({ ...finding, check })));
+  const summary = Object.fromEntries(['critical', 'high', 'medium', 'low'].map((severity) =>
+    [severity, findings.filter((finding) => finding.severity === severity).length]));
+  const checks = ['boundaries', 'prod-leakage'].map((check) => ({ check, ...bazel[check] })).concat(otherChecks);
+  const names = new Set(checks.map((check) => check.check));
+  const contract = {
+    ...expected,
+    mustFind: expected.mustFind.filter((finding) => finding.id.includes('/bazel-')),
+    mustNotFind: (expected.mustNotFind ?? []).filter((finding) => finding.id.includes('/bazel-')),
+    checks: (expected.checks ?? []).filter((check) => names.has(check.check)),
+  };
+  assert.deepEqual(verify({ version: 1, workspace: {}, summary, checks, findings }, contract), {
+    missing: [], unexpected: [], cleanViolations: [], schemaErrors: [], checkErrors: [], ok: true,
+  });
 }
 
 test('React Turbo example exposes its seeded deep import and file cycle without a package cycle', () => {
@@ -150,6 +174,305 @@ test('Angular Nx example exposes its seeded deep import and file cycle without a
     assert.ok(cycles.findings[0].evidence.includes('libs/data/src/lib/catalog.ts'));
     assert.ok(cycles.findings[0].evidence.includes('libs/data/src/lib/inventory.ts'));
     assert.ok(scan.packages.utils.testFiles.includes('libs/utils/src/lib/price.spec.ts'));
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test('Bazel rules_js example exposes its deep import and Bazel boundary seeds', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bazel-rules-js-scan-'));
+  const work = path.join(temp, 'work');
+  const example = path.join(root, 'examples', 'bazel-rules-js');
+  try {
+    runSkillSnippets(example, work);
+    const workspace = JSON.parse(fs.readFileSync(path.join(work, 'workspace.json'), 'utf8'));
+    const scan = JSON.parse(fs.readFileSync(path.join(work, 'scan.json'), 'utf8'));
+    const bazel = JSON.parse(fs.readFileSync(path.join(work, 'bazel.json'), 'utf8'));
+    const cycles = JSON.parse(fs.readFileSync(path.join(work, 'findings', 'circular-deps.json'), 'utf8'));
+    const expected = JSON.parse(fs.readFileSync(path.join(root, 'fixtures', 'expected', 'bazel-rules-js.json'), 'utf8'));
+
+    assert.deepEqual(workspace.orchestrators.map((o) => o.name), ['bazel']);
+    assert.deepEqual(workspace.packages.map((p) => p.name).sort(), [
+      '@sample/math-core', '@sample/storefront', '@sample/test-utils',
+    ]);
+    assert.deepEqual(scan.imports.filter((entry) => entry.deep).map((entry) => ({
+      from: entry.from, target: entry.target, spec: entry.spec,
+    })), [{
+      from: '@sample/storefront',
+      target: '@sample/math-core',
+      spec: '../../../packages/math-core/src/internal/rounding.js',
+    }]);
+    assert.equal(scan.imports.find((entry) => entry.deep).declared, true);
+    assert.equal(cycles.status, 'partial');
+    assert.match(cycles.reason, /Bazel dependency and non-JS source cycles/);
+    verifyBazelContract(bazel, expected);
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test('standalone Bazel Java example produces the expected scoped findings', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bazel-java-scan-'));
+  const work = path.join(temp, 'work');
+  const example = path.join(root, 'examples', 'bazel-java');
+  try {
+    runSkillSnippets(example, work);
+    const workspace = JSON.parse(fs.readFileSync(path.join(work, 'workspace.json'), 'utf8'));
+    const scan = JSON.parse(fs.readFileSync(path.join(work, 'scan.json'), 'utf8'));
+    const bazel = JSON.parse(fs.readFileSync(path.join(work, 'bazel.json'), 'utf8'));
+    const cycles = JSON.parse(fs.readFileSync(path.join(work, 'findings', 'circular-deps.json'), 'utf8'));
+    const expected = JSON.parse(fs.readFileSync(path.join(root, 'fixtures', 'expected', 'bazel-java.json'), 'utf8'));
+
+    assert.deepEqual(workspace.orchestrators.map((o) => o.name), ['bazel']);
+    assert.deepEqual(workspace.packages, []);
+    assert.deepEqual(workspace.bazel.buildFiles, [
+      'apps/catalog/BUILD.bazel', 'libs/catalog/BUILD.bazel', 'libs/testdata/BUILD.bazel',
+    ]);
+    assert.deepEqual(scan.imports, []);
+    assert.equal(cycles.status, 'skipped');
+    verifyBazelContract(bazel, expected, [{ check: 'circular-deps', ...cycles }]);
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test('Bazel static scan follows literal local paths and leaves ambiguous targets unflagged', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bazel-literals-'));
+  const example = path.join(temp, 'workspace');
+  const work = path.join(temp, 'work');
+  try {
+    fs.mkdirSync(example);
+    fs.writeFileSync(path.join(example, 'MODULE.bazel'), 'module(name = "example")\n');
+    fs.writeFileSync(path.join(example, 'BUILD'), 'filegroup(name = "ignored", tags = ["internal"], visibility = ["//visibility:public"])\n');
+    fs.writeFileSync(path.join(example, 'BUILD.bazel'), `
+load("@rules_java//java:defs.bzl", "java_binary", java_lib = "java_library")
+package(default_visibility = ["//visibility:public"])
+# java_lib(name = "commented", tags = ["internal"], visibility = ["//visibility:public"])
+filegroup(name = "inherited", tags = ["internal"])
+java_lib(name = "macro_default", tags = ["internal"])
+java_lib(name = "private", tags = ["internal"], visibility = ["//visibility:private"])
+java_lib(name = "api", visibility = ["//visibility:public"])
+java_lib(name = "dynamic_visibility", tags = ["internal"], visibility = select({"//conditions:default": ["//visibility:public"]}))
+java_lib(name = "dynamic_tags", tags = select({"//conditions:default": ["internal"]}))
+java_lib(name = "string_tags", tags = "internal", visibility = ["//visibility:public"])
+filegroup(name = "conditional", tags = ["internal"], visibility = ["//visibility:public"]) if False else None
+filegroup(name = "fixture", srcs = ["fixture.txt"], testonly = True)
+filegroup(name = "bridge", srcs = [":fixture"])
+java_binary(name = "production", tags = ["production"], testonly = False, data = [":bridge"])
+java_binary(name = "conditional_production", tags = ["production"], testonly = False, data = [":fixture"]) if False else None
+java_binary(name = "test_user", tags = ["production"], testonly = True, data = [":fixture"])
+java_binary(name = "unknown_testonly", tags = ["production"], data = [":fixture"])
+java_binary(name = "dynamic_data", tags = ["production"], testonly = False, data = select({"//conditions:default": [":fixture"]}))
+`);
+    fs.mkdirSync(path.join(example, 'nested'));
+    fs.writeFileSync(path.join(example, 'nested', 'MODULE.bazel'), 'module(name = "nested")\n');
+    fs.writeFileSync(path.join(example, 'nested', 'BUILD.bazel'), 'filegroup(name = "nested", tags = ["internal"], visibility = ["//visibility:public"])\n');
+    fs.writeFileSync(path.join(example, '.bazelignore'), '# Not part of this workspace\nignored/\n');
+    fs.mkdirSync(path.join(example, 'ignored'));
+    fs.writeFileSync(path.join(example, 'ignored', 'BUILD.bazel'), 'filegroup(name = "ignored", tags = ["internal"], visibility = ["//visibility:public"])\n');
+    fs.mkdirSync(path.join(example, 'custom'));
+    fs.writeFileSync(path.join(example, 'custom', 'BUILD.bazel'), `
+load("//:defs.bzl", "java_library")
+java_library(name = "custom_macro", tags = ["internal"], visibility = ["//visibility:public"])
+`);
+    fs.mkdirSync(path.join(example, 'shadowed'));
+    fs.writeFileSync(path.join(example, 'shadowed', 'BUILD.bazel'), `
+load("//:defs.bzl", "replacement")
+filegroup = replacement
+filegroup(name = "shadowed", tags = ["internal"], visibility = ["//visibility:public"])
+`);
+    fs.mkdirSync(path.join(example, 'shadowed_tuple'));
+    fs.writeFileSync(path.join(example, 'shadowed_tuple', 'BUILD.bazel'), `
+load("//:defs.bzl", "replacement")
+filegroup, unused = replacement, None
+filegroup(name = "shadowed_tuple", tags = ["internal"], visibility = ["//visibility:public"])
+`);
+    fs.mkdirSync(path.join(example, 'shadowed_package'));
+    fs.writeFileSync(path.join(example, 'shadowed_package', 'BUILD.bazel'), `
+load("//:defs.bzl", "replacement")
+package = replacement
+package(default_visibility = ["//visibility:public"])
+filegroup(name = "not_public", tags = ["internal"])
+`);
+    fs.writeFileSync(path.join(example, 'REPO.bazel'), 'repo(default_visibility = ["//visibility:private"])\n');
+
+    runSkillSnippets(example, work);
+    const workspace = JSON.parse(fs.readFileSync(path.join(work, 'workspace.json'), 'utf8'));
+    const bazel = JSON.parse(fs.readFileSync(path.join(work, 'bazel.json'), 'utf8'));
+    assert.deepEqual(workspace.bazel.buildFiles, [
+      'BUILD.bazel', 'custom/BUILD.bazel', 'shadowed/BUILD.bazel',
+      'shadowed_package/BUILD.bazel', 'shadowed_tuple/BUILD.bazel',
+    ]);
+    assert.equal(bazel.boundaries.status, 'partial');
+    assert.deepEqual(bazel.boundaries.findings.map((finding) => finding.title), [
+      'Internal-tagged target //:inherited is publicly visible',
+    ]);
+    assert.equal(bazel['prod-leakage'].findings.length, 1);
+    assert.match(bazel['prod-leakage'].findings[0].evidence, /\/\/:production.*\n\/\/:production.*\/\/:bridge\n\/\/:bridge.*\/\/:fixture/s);
+    assert.match(bazel['prod-leakage'].reason, /macros, selects, package groups and external dependencies/);
+
+    fs.writeFileSync(path.join(example, 'REPO.bazel'), 'ignore_directories(["**/custom"])\n');
+    runSkillSnippets(example, work);
+    const unresolved = JSON.parse(fs.readFileSync(path.join(work, 'bazel.json'), 'utf8'));
+    for (const check of ['boundaries', 'prod-leakage']) {
+      assert.deepEqual(unresolved[check].findings, []);
+      assert.match(unresolved[check].reason, /REPO\.bazel ignore_directories is not resolved/);
+    }
+
+    fs.unlinkSync(path.join(example, 'REPO.bazel'));
+    fs.unlinkSync(path.join(example, '.bazelignore'));
+    fs.mkdirSync(path.join(example, '.bazelignore'));
+    runSkillSnippets(example, work);
+    const unreadable = JSON.parse(fs.readFileSync(path.join(work, 'bazel.json'), 'utf8'));
+    assert.deepEqual(unreadable.boundaries.findings, []);
+    assert.match(unreadable.boundaries.reason, /\.bazelignore:/);
+    assert.deepEqual(unreadable['prod-leakage'].findings, []);
+
+    fs.rmdirSync(path.join(example, '.bazelignore'));
+    fs.writeFileSync(path.join(example, '.bazelignore'), './\n');
+    assert.throws(() => runSkillSnippets(example, work), (error) => {
+      assert.equal(error.status, 2);
+      assert.match(error.stderr.toString(), /NO_WORKSPACE/);
+      return true;
+    });
+    const ignoredRoot = JSON.parse(fs.readFileSync(path.join(work, 'workspace.json'), 'utf8'));
+    assert.deepEqual(ignoredRoot.bazel.buildFiles, []);
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test('Bazel scan continues past unsupported expressions starting with a bracket string', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bazel-bracket-string-'));
+  const example = path.join(temp, 'workspace');
+  const work = path.join(temp, 'work');
+  try {
+    fs.mkdirSync(example);
+    fs.writeFileSync(path.join(example, 'MODULE.bazel'), 'module(name = "example")\n');
+    fs.writeFileSync(path.join(example, 'BUILD.bazel'), `
+filegroup(name = "dynamic", deprecation = "[" + "description")
+filegroup(name = "later", tags = ["internal"], visibility = ["//visibility:public"])
+`);
+
+    runSkillSnippets(example, work);
+    const bazel = JSON.parse(fs.readFileSync(path.join(work, 'bazel.json'), 'utf8'));
+    assert.deepEqual(bazel.boundaries.findings.map((finding) => finding.title), [
+      'Internal-tagged target //:later is publicly visible',
+    ]);
+    assert.doesNotMatch(bazel.boundaries.reason, /unclosed delimiter/);
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test('Bazel scan ignores calls in continued expressions but finds standalone calls', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bazel-continued-'));
+  const example = path.join(temp, 'workspace');
+  const work = path.join(temp, 'work');
+  try {
+    fs.mkdirSync(example);
+    fs.writeFileSync(path.join(example, 'MODULE.bazel'), 'module(name = "example")\n');
+    const build = `
+unused = False and \\
+    filegroup(name = "continued", tags = ["internal"], visibility = ["//visibility:public"])
+filegroup(name = "conditional", tags = ["internal"], visibility = ["//visibility:public"]) \\
+    if False else None
+# This backslash is part of a comment: \\
+filegroup(
+    name = "standalone",
+    tags = ["internal"],
+    visibility = ["//visibility:public"],
+)
+filegroup(name = "semicolon", tags = ["internal"], visibility = ["//visibility:public"]); filegroup(name = "after_semicolon", tags = ["internal"], visibility = ["//visibility:public"]);
+filegroup(name = "conditional_semicolon", tags = ["internal"], visibility = ["//visibility:public"]) if False else None;
+`;
+    fs.writeFileSync(path.join(example, 'BUILD.bazel'), build);
+    fs.mkdirSync(path.join(example, 'crlf'));
+    fs.writeFileSync(path.join(example, 'crlf', 'BUILD.bazel'), build.replaceAll('\n', '\r\n'));
+
+    runSkillSnippets(example, work);
+    const bazel = JSON.parse(fs.readFileSync(path.join(work, 'bazel.json'), 'utf8'));
+    assert.deepEqual(bazel.boundaries.findings.map((finding) => finding.title), [
+      'Internal-tagged target //:standalone is publicly visible',
+      'Internal-tagged target //:semicolon is publicly visible',
+      'Internal-tagged target //:after_semicolon is publicly visible',
+      'Internal-tagged target //crlf:standalone is publicly visible',
+      'Internal-tagged target //crlf:semicolon is publicly visible',
+      'Internal-tagged target //crlf:after_semicolon is publicly visible',
+    ]);
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test('Bazel scan resolves canonical main-repository labels but not external labels', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bazel-main-label-'));
+  const example = path.join(temp, 'workspace');
+  const work = path.join(temp, 'work');
+  try {
+    fs.mkdirSync(example);
+    fs.writeFileSync(path.join(example, 'MODULE.bazel'), 'module(name = "example")\n');
+    fs.writeFileSync(path.join(example, 'BUILD.bazel'), `
+filegroup(name = "fixture", testonly = True)
+filegroup(name = "relative", tags = ["production"], testonly = False, srcs = [":fixture"])
+filegroup(name = "main_root", tags = ["production"], testonly = False, srcs = ["@@//:fixture"])
+filegroup(name = "main_package", tags = ["production"], testonly = False, srcs = ["@@//fixtures:fixture"])
+filegroup(name = "external", tags = ["production"], testonly = False, srcs = ["@other//:fixture", "@@other//fixtures:fixture"])
+`);
+    fs.mkdirSync(path.join(example, 'fixtures'));
+    fs.writeFileSync(path.join(example, 'fixtures', 'BUILD.bazel'), 'filegroup(name = "fixture", testonly = True)\n');
+
+    runSkillSnippets(example, work);
+    const bazel = JSON.parse(fs.readFileSync(path.join(work, 'bazel.json'), 'utf8'));
+    assert.deepEqual(bazel['prod-leakage'].findings.map((finding) => finding.title), [
+      'Production target //:relative depends on test-only target //:fixture',
+      'Production target //:main_root depends on test-only target //:fixture',
+      'Production target //:main_package depends on test-only target //fixtures:fixture',
+    ]);
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test('Bazel detection recognizes an empty REPO.bazel as a root marker', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bazel-repo-root-'));
+  const example = path.join(temp, 'workspace');
+  const work = path.join(temp, 'work');
+  try {
+    fs.mkdirSync(example);
+    fs.writeFileSync(path.join(example, 'REPO.bazel'), '');
+    fs.writeFileSync(path.join(example, 'BUILD.bazel'), 'filegroup(name = "root", tags = ["internal"], visibility = ["//visibility:public"])\n');
+
+    runSkillSnippets(example, work);
+    const workspace = JSON.parse(fs.readFileSync(path.join(work, 'workspace.json'), 'utf8'));
+    const bazel = JSON.parse(fs.readFileSync(path.join(work, 'bazel.json'), 'utf8'));
+    assert.deepEqual(workspace.orchestrators.map((o) => o.name), ['bazel']);
+    assert.deepEqual(workspace.bazel.buildFiles, ['BUILD.bazel']);
+    assert.equal(bazel.boundaries.findings.length, 1);
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test('Bazel detection includes packages under a nested REPO.bazel', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bazel-nested-repo-'));
+  const example = path.join(temp, 'workspace');
+  const work = path.join(temp, 'work');
+  try {
+    fs.mkdirSync(example);
+    fs.writeFileSync(path.join(example, 'MODULE.bazel'), 'module(name = "example")\n');
+    fs.writeFileSync(path.join(example, 'BUILD.bazel'), 'filegroup(name = "root")\n');
+    fs.mkdirSync(path.join(example, 'nested'));
+    fs.writeFileSync(path.join(example, 'nested', 'REPO.bazel'), '');
+    fs.writeFileSync(path.join(example, 'nested', 'BUILD.bazel'), 'filegroup(name = "internal", tags = ["internal"], visibility = ["//visibility:public"])\n');
+
+    runSkillSnippets(example, work);
+    const workspace = JSON.parse(fs.readFileSync(path.join(work, 'workspace.json'), 'utf8'));
+    const bazel = JSON.parse(fs.readFileSync(path.join(work, 'bazel.json'), 'utf8'));
+    assert.deepEqual(workspace.bazel.buildFiles, ['BUILD.bazel', 'nested/BUILD.bazel']);
+    assert.deepEqual(bazel.boundaries.findings.map((finding) => finding.title), [
+      'Internal-tagged target //nested:internal is publicly visible',
+    ]);
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
   }

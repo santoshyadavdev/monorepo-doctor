@@ -26,6 +26,7 @@ These are byte-for-byte copies of the files in the repository, regenerated on ev
 monorepo-doctor loads its references on demand from `/skills/monorepo-doctor/references/`:
 [`detection.md`](/skills/monorepo-doctor/references/detection.md),
 [`scan.md`](/skills/monorepo-doctor/references/scan.md),
+[`bazel.md`](/skills/monorepo-doctor/references/bazel.md),
 [`boundaries.md`](/skills/monorepo-doctor/references/boundaries.md),
 [`circular-deps.md`](/skills/monorepo-doctor/references/circular-deps.md),
 [`caching.md`](/skills/monorepo-doctor/references/caching.md),
@@ -40,13 +41,15 @@ npx skills add santoshyadavdev/monorepo-doctor --skill monorepo-doctor
 npx skills add santoshyadavdev/monorepo-doctor --skill monorepo-boundaries-cleanup
 ```
 
-## Example workspace
+## Example workspaces
 
 For a reproducible audit, the repository's [React + Turborepo example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/react-turbo) contains two React apps and four libraries with intentional findings across all five doctor checks. See [Getting started](/getting-started/#try-the-react-and-turborepo-example) for setup, an audit prompt and report verification. The [Angular + Nx example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/angular-nx) does the same for an integrated Nx workspace (two Angular apps, four `project.json` libraries); see [Getting started](/getting-started/#try-the-angular-and-nx-example). Run the audit from the example workspace root; do not install dependencies, build or run tests as part of the read-only audit.
 
+The [Bazel + Java example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/bazel-java) has no npm workspace or `package.json`; the [Bazel + rules_js example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/bazel-rules-js) combines Bazel with JavaScript. See [Getting started](/getting-started/#try-the-bazel-examples) for their scope and report verification. The audit requires Node.js, but does not invoke Bazel.
+
 ## When to use which skill
 
-- **monorepo-doctor** — the user asks for a monorepo audit or health check, or reports Nx/Turborepo cache problems, affected tests not running, circular dependencies, package boundary drift, or test code shipped to production. It is read-only: never install, build, run tests or edit files while following it.
+- **monorepo-doctor** — the user asks for a monorepo audit or health check, reports Nx/Turborepo cache problems, affected tests not running, circular dependencies, package boundary drift, or test code shipped to production, or asks for the supported static Bazel target checks. Bazel-only coverage is limited and partial. It is read-only: never install, build, run tests or edit files while following it.
 - **monorepo-boundaries-cleanup** — a boundary linter or a monorepo-doctor report shows existing violations that must be paid down. It edits code and opens PRs, one root cause per PR, and stops after each PR until the user reports CI status.
 
 ## Ground rules for agents

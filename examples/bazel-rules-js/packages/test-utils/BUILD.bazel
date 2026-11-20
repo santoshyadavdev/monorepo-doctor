@@ -1,0 +1,6 @@
+filegroup(
+    name = "catalog_fixtures",
+    srcs = ["fixtures.json"],
+    testonly = True,
+    visibility = ["//visibility:public"],
+)

@@ -1,26 +1,26 @@
 ---
 title: monorepo-doctor
-description: A read-only audit of JS/TS monorepos for package boundaries, circular dependencies, task caching, CI test coverage and test code in production.
+description: A read-only JS/TS monorepo audit and limited static Bazel target inspection.
 ---
 
-`monorepo-doctor` is a **read-only** agent skill for npm, yarn, pnpm and bun workspaces, with deeper rules for Nx and Turborepo. It walks an agent through deterministic detection, a source scan, five independent checks, and an evidence-backed Markdown and JSON report.
+`monorepo-doctor` is a **read-only** agent skill for npm, yarn, pnpm and bun workspaces, with deeper rules for Nx and Turborepo. It also inspects a limited set of Bazel target relationships, including in standalone Java workspaces. It walks an agent through deterministic detection, source scanning, independent checks, and an evidence-backed Markdown and JSON report.
 
 ## What it checks
 
 | Check | What it looks for | Example finding ids |
 |---|---|---|
-| [Package boundaries](/reference/monorepo-doctor/boundaries/) | Packages too large for their consumers (packages no other workspace package imports are never flagged), imports through another package's internals, knip unlisted/unused dependencies, missing Nx enforcement, invalid Turbo boundary configuration / reported violations. | `boundaries/deep-import`, `boundaries/nx-missing-module-boundaries-rule`, `boundaries/turbo-package-boundaries-tags`, `boundaries/turbo-tag-package-name-collision`, `boundaries/turbo-boundaries-violation` |
+| [Package boundaries](/reference/monorepo-doctor/boundaries/) | Packages too large for their consumers (packages no other workspace package imports are never flagged), imports through another package's internals, knip unlisted/unused dependencies, missing Nx enforcement, invalid Turbo boundary configuration / reported violations, and Bazel internal-tagged targets exposed publicly. | `boundaries/deep-import`, `boundaries/nx-missing-module-boundaries-rule`, `boundaries/turbo-package-boundaries-tags`, `boundaries/turbo-tag-package-name-collision`, `boundaries/turbo-boundaries-violation`, `boundaries/bazel-public-internal-target` |
 | [Circular dependencies](/reference/monorepo-doctor/circular-deps/) | Package-level cycles and value-import file cycles, one finding per strongly connected group. File cycles are medium when a binding is read during module evaluation, low when every use is deferred, and skipped for idiomatic lazy ORM references. | `circular-deps/package-cycle`, `circular-deps/file-cycle` |
 | [Task caching](/reference/monorepo-doctor/caching/) | Nx/Turbo cache configuration that can replay stale results or miss useful hits: missing outputs, undeclared env vars, volatile inputs, dependency-blind test caches. | `caching/missing-outputs`, `caching/undeclared-env`, `caching/build-inputs-include-tests` |
 | [CI test coverage](/reference/monorepo-doctor/ci-coverage/) | CI paths where tests silently don't run for changed code: no test command, shallow affected checkout, missing Nx base refs, invalid Turbo comparison ranges, undeclared workspace dependencies. | `ci-coverage/tests-not-run-in-ci`, `ci-coverage/shallow-checkout-affected`, `ci-coverage/turbo-invalid-comparison-base`, `ci-coverage/turbo-test-missing-dependson` |
-| [Production leakage](/reference/monorepo-doctor/prod-leakage/) | Test files, fixtures, compiled test output or test libraries that can ship in package tarballs or deployable builds. | `prod-leakage/test-files-in-package`, `prod-leakage/test-files-in-build-output`, `prod-leakage/test-lib-in-dependencies` |
+| [Production leakage](/reference/monorepo-doctor/prod-leakage/) | Test files, fixtures, compiled test output or test libraries that can ship in package tarballs or deployable builds; invalid Bazel production-to-`testonly` dependencies. | `prod-leakage/test-files-in-package`, `prod-leakage/test-files-in-build-output`, `prod-leakage/test-lib-in-dependencies`, `prod-leakage/bazel-testonly-dependency` |
 
 Findings must be actionable. When the honest fix is "keep it as-is" — for example `cache: false` on a migration task — the skill notes it in the check's reason instead of reporting a finding.
 
 ## How it works
 
-1. **[Detect](/reference/monorepo-doctor/detection/)** — package manager, workspaces, Nx/Turbo config, CI files, and whether `node_modules`, `nx` and `turbo` are installed. Writes `$W/workspace.json`.
-2. **[Scan](/reference/monorepo-doctor/scan/)** — walks every package's source once: imports (value vs type-only), env reads, test files. Writes `$W/scan.json`.
+1. **[Detect](/reference/monorepo-doctor/detection/)** — package manager, workspaces, Bazel BUILD files, Nx/Turbo config, CI files, and whether `node_modules`, `nx` and `turbo` are installed. Writes `$W/workspace.json`.
+2. **[Scan](/reference/monorepo-doctor/scan/)** — walks every JS/TS package's source once: imports (value vs type-only), env reads, test files. When Bazel is detected, also runs the read-only [static target inspection](/reference/monorepo-doctor/bazel/).
 3. **Check** — the five checks run independently against the inventory and scan, each writing `$W/findings/<check>.json` with a status of `ok`, `partial` or `skipped` and a reason.
 4. **[Render](/reference/monorepo-doctor/report-format/)** — merges findings into `monorepo-doctor-report.md` and `monorepo-doctor-report.json`.
 
@@ -29,6 +29,10 @@ Findings must be actionable. When the honest fix is "keep it as-is" — for exam
 ### Supported workspaces
 
 Packages are discovered from `package.json#workspaces` and `pnpm-workspace.yaml`. With **Nx**, it also reads `nx.json`, `project.json`, package `nx` targets, tags, target defaults, named inputs, and a local Nx graph when the `nx` binary is installed. With **Turborepo**, it reads `turbo.json`, package-level overrides, dry-run metadata when `turbo` is installed, and `turbo boundaries` output when available.
+
+Bazel workspaces are recognized from `MODULE.bazel`, `REPO.bazel`, or a `WORKSPACE` file and can be audited without an npm workspace or `package.json`. The audit itself requires Node.js. The supported Bazel checks inspect literal local targets for an `internal` tag exposed publicly, or a target explicitly tagged `production` and marked `testonly = False` depending on a target marked `testonly = True`. The `internal` tag is a project convention, not a Bazel policy; Bazel normally rejects the latter relationship during analysis, so it is a build error, not proof that test code shipped.
+
+Bazel inspection is always `partial`: it does not resolve macros, selects, package groups, external dependencies or other dynamic graph features. In a Bazel-only workspace, Java source cycles, Bazel caching and Bazel CI coverage are not analyzed and those checks are `skipped`. See the [Bazel reference](/reference/monorepo-doctor/bazel/) for the supported rules and attributes.
 
 For verified stable Turbo 2.x >= 2.5.0, static checks also catch root-only `boundaries.tags` placed in a package config and root rule names that collide with workspace package names, even without a local binary. Tags and policies are optional: absent rules and untagged packages are not findings, and package names in allow/deny lists are valid.
 
@@ -117,7 +121,7 @@ It may run:
 - `knip` and `publint` from your repo's `node_modules/.bin` **only** when installed there
 - `nx` / `turbo` from your repo's `node_modules/.bin` **only** when installed there, and only for graph, `--dry=json` and `boundaries` inspection — never real task execution
 
-It downloads nothing at runtime by default. If you explicitly allow downloads in your prompt (for example *"Run monorepo-doctor, downloads allowed"*), it may fetch the pinned `knip@6.41.0` and `publint@0.3.25` with install scripts disabled — never other packages or versions.
+It does not invoke Bazel and downloads nothing at runtime by default. If you explicitly allow downloads in your prompt (for example *"Run monorepo-doctor, downloads allowed"*), it may fetch the pinned `knip@6.41.0` and `publint@0.3.25` with install scripts disabled — never other packages or versions.
 
 Nx graph runs with `NX_DAEMON=false NX_NO_CLOUD=true` and a workspace-data directory under `$W`, so it doesn't start the daemon or write `.nx/workspace-data` into your repo. Turbo commands use `TURBO_TELEMETRY_DISABLED=1`.
 

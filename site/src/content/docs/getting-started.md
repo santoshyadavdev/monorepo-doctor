@@ -115,6 +115,28 @@ node scripts/verify-fixture.mjs \
 
 The [example README](https://github.com/santoshyadavdev/monorepo-doctor/blob/master/examples/angular-nx/README.md) lists the seeded findings, suggested repairs, negative controls and commands to serve both apps.
 
+## Try the Bazel examples
+
+The [Bazel + Java example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/bazel-java) is a standalone workspace with a runnable Java app and test. It does **not** need npm or a `package.json`. With Bazel 8.4.2 (or Bazelisk) and a Java toolchain installed:
+
+```bash
+cd monorepo-doctor/examples/bazel-java
+bazel run //apps/catalog:catalog
+bazel test //apps/catalog:catalog_test
+```
+
+Its `broken_release` target intentionally fails Bazel analysis because it depends on test-only data; avoid `bazel build //...` unless you intend to see that failure. See the [Java example README](https://github.com/santoshyadavdev/monorepo-doctor/blob/master/examples/bazel-java/README.md) for a remote-JDK alternative.
+
+Start your agent in `examples/bazel-java` and use the same audit prompt. The audit uses Node.js but does not run Bazel or install dependencies. It reports the Bazel boundary and test-only checks as `partial`; it skips Java source cycles, Bazel caching and Bazel CI coverage. From the repository root, verify the report:
+
+```bash
+node scripts/verify-fixture.mjs \
+  "$(node -p 'require("os").tmpdir()')/monorepo-doctor-reports/monorepo-doctor-report.json" \
+  fixtures/expected/bazel-java.json
+```
+
+The [Bazel + rules_js example](https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/bazel-rules-js) demonstrates the same target checks alongside a JavaScript workspace.
+
 ## Fix what it found
 
 When the report shows boundary violations, hand them to the cleanup skill one batch at a time:

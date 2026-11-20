@@ -1,0 +1,18 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+
+js_library(
+    name = "app",
+    srcs = ["src/index.js"],
+    deps = ["//packages/math-core:rounding_internal"],
+    tags = ["production"],
+)
+
+filegroup(
+    name = "release_bundle",
+    srcs = [
+        ":app",
+        "//packages/test-utils:catalog_fixtures",
+    ],
+    tags = ["production"],
+    testonly = False,
+)

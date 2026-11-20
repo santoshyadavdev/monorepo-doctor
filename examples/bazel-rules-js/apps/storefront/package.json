@@ -1,0 +1,8 @@
+{
+  "name": "@sample/storefront",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@sample/math-core": "1.0.0"
+  }
+}
