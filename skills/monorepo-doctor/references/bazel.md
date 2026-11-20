@@ -143,11 +143,12 @@ function calls(text) {
   const tokens = lex(text), result = [], loadTokens = new Set();
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
-    const statementStart = i === 0 || tokens[i - 1].logicalLine !== t.logicalLine;
+    const isSemicolon = (tok) => tok?.type === 'punct' && tok.value === ';';
+    const statementStart = i === 0 || tokens[i - 1].logicalLine !== t.logicalLine || isSemicolon(tokens[i - 1]);
     if (t.type === 'id' && tokens[i + 1]?.type === 'punct' && tokens[i + 1].value === '('
         && tokens[i + 1].logicalLine === t.logicalLine && statementStart) {
       const end = groupEnd(tokens, i + 1);
-      if (tokens[end + 1]?.logicalLine !== tokens[end].logicalLine) {
+      if (tokens[end + 1]?.logicalLine !== tokens[end].logicalLine || isSemicolon(tokens[end + 1])) {
         result.push({ name: t.value, line: t.line, parts: splitArgs(tokens.slice(i + 2, end)) });
         if (t.value === 'load') for (let j = i + 1; j < end; j++) loadTokens.add(j);
       }

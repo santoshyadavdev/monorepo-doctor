@@ -383,6 +383,8 @@ filegroup(
     tags = ["internal"],
     visibility = ["//visibility:public"],
 )
+filegroup(name = "semicolon", tags = ["internal"], visibility = ["//visibility:public"]); filegroup(name = "after_semicolon", tags = ["internal"], visibility = ["//visibility:public"]);
+filegroup(name = "conditional_semicolon", tags = ["internal"], visibility = ["//visibility:public"]) if False else None;
 `;
     fs.writeFileSync(path.join(example, 'BUILD.bazel'), build);
     fs.mkdirSync(path.join(example, 'crlf'));
@@ -392,7 +394,11 @@ filegroup(
     const bazel = JSON.parse(fs.readFileSync(path.join(work, 'bazel.json'), 'utf8'));
     assert.deepEqual(bazel.boundaries.findings.map((finding) => finding.title), [
       'Internal-tagged target //:standalone is publicly visible',
+      'Internal-tagged target //:semicolon is publicly visible',
+      'Internal-tagged target //:after_semicolon is publicly visible',
       'Internal-tagged target //crlf:standalone is publicly visible',
+      'Internal-tagged target //crlf:semicolon is publicly visible',
+      'Internal-tagged target //crlf:after_semicolon is publicly visible',
     ]);
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
