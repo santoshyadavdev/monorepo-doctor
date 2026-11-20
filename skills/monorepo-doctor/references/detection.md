@@ -93,6 +93,63 @@ const prune = (p) => SKIP_NAMES.has(path.basename(String(p)));
 const orchestrators = [];
 if (exists('nx.json')) orchestrators.push({ name: 'nx', installed: exists('node_modules/.bin/nx') });
 if (exists('turbo.json')) orchestrators.push({ name: 'turbo', installed: exists('node_modules/.bin/turbo') });
+if (['MODULE.bazel', 'WORKSPACE', 'WORKSPACE.bazel'].some(exists)) orchestrators.push({ name: 'bazel' });
+
+const bazelProblems = [];
+const bazelSkipped = new Set(['node_modules', '.git', '.nx', '.turbo', '.cache']);
+let bazelIgnored = [];
+let bazelUnresolvedExclusions = false;
+if (orchestrators.some((o) => o.name === 'bazel') && exists('.bazelignore')) {
+  try {
+    bazelIgnored = fs.readFileSync(path.join(root, '.bazelignore'), 'utf8').split(/\r?\n/)
+      .filter((line) => line && !line.startsWith('#'))
+      .map((line) => {
+        const dir = path.posix.normalize(line);
+        return dir.length > 1 ? dir.replace(/\/+$/, '') : dir;
+      });
+    for (const dir of bazelIgnored) {
+      if (path.posix.isAbsolute(dir) || dir.split('/').includes('..')) {
+        bazelProblems.push(`.bazelignore: invalid path ${dir}`);
+        bazelUnresolvedExclusions = true;
+      }
+    }
+  } catch (error) {
+    bazelProblems.push(`.bazelignore: ${error.message}`);
+    bazelUnresolvedExclusions = true;
+  }
+}
+if (orchestrators.some((o) => o.name === 'bazel') && exists('REPO.bazel')) {
+  try {
+    if (/\bignore_directories\b/.test(fs.readFileSync(path.join(root, 'REPO.bazel'), 'utf8'))) {
+      bazelProblems.push('REPO.bazel ignore_directories is not resolved; Bazel target findings suppressed');
+      bazelUnresolvedExclusions = true;
+    }
+  } catch (error) {
+    bazelProblems.push(`REPO.bazel: ${error.message}`);
+    bazelUnresolvedExclusions = true;
+  }
+}
+function findBazelBuildFiles(dir = '') {
+  if (!dir && bazelIgnored.includes('.')) return [];
+  let entries;
+  try { entries = fs.readdirSync(path.join(root, dir), { withFileTypes: true }); }
+  catch (error) { bazelProblems.push(`${toPosix(dir) || '.'}: ${error.message}`); return []; }
+  if (dir && entries.some((e) => e.isFile() && ['MODULE.bazel', 'WORKSPACE', 'WORKSPACE.bazel'].includes(e.name))) return [];
+  const names = new Set(entries.filter((e) => e.isFile()).map((e) => e.name));
+  const build = names.has('BUILD.bazel') ? 'BUILD.bazel' : names.has('BUILD') ? 'BUILD' : null;
+  const files = build ? [toPosix(path.join(dir, build))] : [];
+  for (const entry of entries) {
+    const child = toPosix(path.join(dir, entry.name));
+    if (entry.isDirectory() && !bazelSkipped.has(entry.name)
+        && !bazelIgnored.some((ignored) => child === ignored || child.startsWith(`${ignored}/`))) {
+      files.push(...findBazelBuildFiles(child));
+    }
+  }
+  return files;
+}
+const bazel = orchestrators.some((o) => o.name === 'bazel')
+  ? { buildFiles: findBazelBuildFiles().sort(), errors: bazelProblems, unresolvedExclusions: bazelUnresolvedExclusions }
+  : null;
 
 const dirs = new Map();
 for (const g of include) {
@@ -147,10 +204,13 @@ const ws = {
   hasNodeModules: exists('node_modules'),
   tools: { knip: exists('node_modules/.bin/knip'), publint: exists('node_modules/.bin/publint') },
   ciFiles: ci.map(toPosix),
-  packages,
+  packages, bazel,
 };
 fs.writeFileSync(path.join(work, 'workspace.json'), JSON.stringify(ws, null, 2));
-if (!packages.length) { console.error('NO_WORKSPACE: no workspace packages found under ' + root); process.exit(2); }
+if (!packages.length && !bazel?.buildFiles.length) {
+  if (bazel?.errors.length) { console.error(`BAZEL_INVENTORY_ERROR: ${bazel.errors.join('; ')}`); process.exit(1); }
+  console.error('NO_WORKSPACE: no workspace packages or Bazel BUILD files found under ' + root); process.exit(2);
+}
 console.log(JSON.stringify({ root, packageManager: pm, orchestrators, tools: ws.tools, packages: packages.length, ciFiles: ws.ciFiles.length }));
 EOF
 node "$W/detect.mjs" "<workspace-root>"
@@ -158,7 +218,9 @@ node "$W/detect.mjs" "<workspace-root>"
 
 ## Interpreting the result
 
-- Exit code 2 / `NO_WORKSPACE`: this is not a monorepo. Stop and tell the user; do not produce a report.
+- Exit code 2 / `NO_WORKSPACE`: no supported workspace packages or Bazel BUILD files were found. Stop and tell the user; do not produce a report.
+- `bazel.buildFiles` lists workspace-relative `BUILD.bazel` / `BUILD` files, preferring `BUILD.bazel` if both exist. Nested Bazel workspaces, symlinked directories, dependency directories, and `.bazelignore` paths are not traversed. Inventory errors are included in `bazel.errors` and make the Bazel checks partial. `REPO.bazel` `ignore_directories` patterns are not evaluated; when that name occurs in the file, or exclusions cannot be read, Bazel target findings are suppressed rather than guessed. A Bazel root with BUILD files is accepted without npm workspace packages; `packages` then stays empty, rather than inventing JavaScript packages.
+- A Bazel-only workspace has limited support: run the static Bazel boundary and test-only checks in [bazel.md](bazel.md); mark circular-deps, caching and CI coverage `skipped` with a reason because Java source, Bazel caches, and Bazel CI coverage are not analyzed. The two Bazel-aware checks remain `partial` because JS-specific subchecks and unresolved Bazel constructs are not covered.
 - `orchestrators[].installed: false`: never run nx / turbo (`npx` would download a different version). Use static config analysis only, and mark dependent sub-steps `partial`.
 - `tools.knip` / `tools.publint: false`: skip that tool and mark the check `partial` with reason `<tool> not installed locally`, unless the user explicitly allowed downloads (see SKILL.md).
 - `hasNodeModules: false`: skip `knip`, `publint` and any step that needs resolved dependencies, even if downloads are allowed; mark `partial`.

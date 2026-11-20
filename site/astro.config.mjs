@@ -15,7 +15,7 @@ export default defineConfig({
     starlight({
       title: 'Monorepo Skills',
       description:
-        'Agent skills for JS/TS monorepos: audit boundaries, cycles, caching, CI coverage and test leakage with monorepo-doctor, then pay violations down with monorepo-boundaries-cleanup.',
+        'Agent skills for JS/TS monorepos and limited Bazel target audits: find boundaries, cycles, caching, CI coverage and test leakage issues, then pay boundary violations down.',
       logo: { src: './public/brand-icon.svg', replacesTitle: false },
       head: [
         { tag: 'link', attrs: { rel: 'icon', href: '/favicon.ico', sizes: '48x48' } },
@@ -35,9 +35,9 @@ export default defineConfig({
         starlightLlmsTxt({
           projectName: 'Monorepo Skills',
           description:
-            'Two agent skills for JS/TS monorepos (npm, yarn, pnpm, bun workspaces; Nx; Turborepo). monorepo-doctor is a read-only audit that writes Markdown and JSON reports. monorepo-boundaries-cleanup is a refactoring workflow that removes boundary violations in small PRs against a baseline.',
+            'Two agent skills for JS/TS monorepos (npm, yarn, pnpm, bun workspaces; Nx; Turborepo), plus limited static Bazel target checks that also work in standalone Java workspaces. monorepo-doctor is a read-only audit that writes Markdown and JSON reports. monorepo-boundaries-cleanup is a refactoring workflow that removes boundary violations in small PRs against a baseline.',
           details:
-            'Raw skill files are served at /skills/<skill>/SKILL.md and /skills/monorepo-doctor/references/<file>.md. Install with `npx skills add santoshyadavdev/monorepo-doctor --skill <skill>`. Try the intentionally broken React + Turborepo audit example at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/react-turbo; setup and report verification are documented at https://monorepo-skills.dev/getting-started/#try-the-react-and-turborepo-example. An intentionally broken Angular + Nx example lives at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/angular-nx; see https://monorepo-skills.dev/getting-started/#try-the-angular-and-nx-example.',
+            'Raw skill files are served at /skills/<skill>/SKILL.md and /skills/monorepo-doctor/references/<file>.md. Install with `npx skills add santoshyadavdev/monorepo-doctor --skill <skill>`, or copy the skill files manually. The audit requires Node.js, but a standalone Bazel workspace does not require npm. Bazel inspection is partial and covers literal visibility and test-only target relationships, not Java source cycles, Bazel caching or CI coverage. Try the intentionally broken React + Turborepo example at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/react-turbo, Angular + Nx example at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/angular-nx, and Bazel Java example at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/bazel-java. Setup and report verification are documented at https://monorepo-skills.dev/getting-started/.',
           promote: ['index*', 'getting-started', 'for-agents', 'skills/**'],
         }),
       ],

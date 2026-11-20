@@ -1,0 +1,15 @@
+load("@rules_java//java:defs.bzl", "java_library")
+
+java_library(
+    name = "rounding_internal",
+    srcs = ["src/main/java/example/catalog/internal/Rounding.java"],
+    tags = ["internal"],
+    visibility = ["//visibility:public"],
+)
+
+java_library(
+    name = "catalog",
+    srcs = ["src/main/java/example/catalog/Catalog.java"],
+    deps = [":rounding_internal"],
+    visibility = ["//visibility:public"],
+)

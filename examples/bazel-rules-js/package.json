@@ -1,0 +1,11 @@
+{
+  "name": "bazel-rules-js-example",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.5" },
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "start": "node apps/storefront/src/main.js",
+    "test": "node --test apps/storefront/src/*.test.js"
+  }
+}

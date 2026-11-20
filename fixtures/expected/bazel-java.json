@@ -1,0 +1,33 @@
+{
+  "fixture": "bazel-java",
+  "cleanPackages": [],
+  "mustFind": [
+    {
+      "id": "boundaries/bazel-public-internal-target",
+      "file": "libs/catalog/BUILD.bazel",
+      "evidenceIncludes": ["//libs/catalog:rounding_internal", "//visibility:public"]
+    },
+    {
+      "id": "prod-leakage/bazel-testonly-dependency",
+      "file": "apps/catalog/BUILD.bazel",
+      "evidenceIncludes": ["//apps/catalog:broken_release", "//libs/testdata:catalog_fixture"]
+    }
+  ],
+  "mustNotFind": [
+    {
+      "id": "boundaries/bazel-public-internal-target",
+      "evidenceIncludes": ["//libs/catalog:catalog"]
+    },
+    {
+      "id": "prod-leakage/bazel-testonly-dependency",
+      "evidenceIncludes": ["//apps/catalog:catalog_test"]
+    }
+  ],
+  "checks": [
+    { "check": "boundaries", "status": "partial" },
+    { "check": "circular-deps", "status": "skipped" },
+    { "check": "caching", "status": "skipped" },
+    { "check": "ci-coverage", "status": "skipped" },
+    { "check": "prod-leakage", "status": "partial" }
+  ]
+}

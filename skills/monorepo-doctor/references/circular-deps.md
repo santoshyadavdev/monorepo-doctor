@@ -2,6 +2,11 @@
 
 Output: `findings/circular-deps.json`.
 
+For a Bazel-only workspace (`workspace.json` has no JS/Nx packages), write
+`{"status":"skipped","reason":"Bazel dependency and Java source cycles are not analyzed","findings":[]}`
+and stop this check. For a mixed workspace, report `partial` because Bazel and
+non-JS source cycles are not covered, while retaining JS/Nx findings.
+
 | id | severity | detect |
 |---|---|---|
 | `circular-deps/package-cycle` | high | a strongly connected component (SCC) in the package graph (`workspaceDeps`, or the Nx project graph when Nx is installed). One finding per SCC. |
@@ -34,6 +39,13 @@ const work = path.join(os.tmpdir(), 'monorepo-doctor');
 const ws = JSON.parse(fs.readFileSync(path.join(work, 'workspace.json'), 'utf8'));
 const scan = JSON.parse(fs.readFileSync(path.join(work, 'scan.json'), 'utf8'));
 const nxGraphPath = path.join(work, 'nx-graph.json');
+const hasBazel = ws.orchestrators.some((o) => o.name === 'bazel');
+if (hasBazel && !ws.packages.length) {
+  fs.writeFileSync(path.join(work, 'findings', 'circular-deps.json'), JSON.stringify({
+    status: 'skipped', reason: 'Bazel dependency and Java source cycles are not analyzed', findings: [],
+  }, null, 2));
+  process.exit(0);
+}
 
 // Tarjan: strongly connected components with 2+ nodes (or a self-loop), nodes sorted.
 function sccs(graph) {
@@ -93,11 +105,14 @@ for (const [pkg, edges] of Object.entries(scan.fileEdges)) {
     });
   }
 }
-const status = nx && !useNxGraph ? 'partial' : 'ok';
+const status = (nx && !useNxGraph) || hasBazel ? 'partial' : 'ok';
 const result = { status, findings };
-if (status === 'partial') result.reason = graphFailed
-  ? 'nx graph failed; project graph inferred from package.json only'
-  : 'nx not installed; project graph inferred from package.json only';
+if (status === 'partial') result.reason = [
+  ...(nx && !useNxGraph ? [graphFailed
+    ? 'nx graph failed; project graph inferred from package.json only'
+    : 'nx not installed; project graph inferred from package.json only'] : []),
+  ...(hasBazel ? ['Bazel dependency and non-JS source cycles are not analyzed'] : []),
+].join('; ');
 fs.writeFileSync(path.join(work, 'findings', 'circular-deps.json'), JSON.stringify(result, null, 2));
 console.log(JSON.stringify({ packageCycles: findings.filter((f) => f.id.endsWith('package-cycle')).length, fileCycles: findings.filter((f) => f.id.endsWith('file-cycle')).length }));
 EOF

@@ -3,6 +3,13 @@
 Question: will a cache hit ever replay a wrong result, and are tasks re-running when they should hit?
 Output: `findings/caching.json`. If no orchestrator is detected, only `caching/uncached-root-script` applies; set status `ok` with reason `no task orchestrator`.
 
+These rules do not inspect Bazel caching. For a Bazel-only workspace (no JS/Nx
+packages), write `{"status":"skipped","reason":"Bazel caching is not analyzed","findings":[]}`
+and stop this check. In a mixed workspace, retain applicable JS/Nx/Turbo
+findings but mark the check `partial` with reason `Bazel caching is not analyzed`.
+For `uncached-root-script`, only Nx and Turborepo count as task orchestrators;
+the presence of Bazel alone does not establish how npm scripts are orchestrated.
+
 ## Facts the rules rely on
 
 - **Turborepo**: a task with no `outputs` caches only logs — on a hit, `dist/` is NOT restored, so downstream tasks see stale or missing files. A package's hash covers its own files, its `package.json`, `turbo.json` and the lockfile; changes in workspace dependencies reach a task's hash **only** through `dependsOn` entries with `^` (e.g. `^build`). Env vars affect the hash only when listed in `env`, `globalEnv` (or `passThroughEnv` for runtime-only); framework prefixes such as `NEXT_PUBLIC_`, `VITE_` are auto-included. Turbo 2 strict env mode can also restrict which env vars are visible to tasks, so undeclared env is both a cache-key and runtime-visibility risk.

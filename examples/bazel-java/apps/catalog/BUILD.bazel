@@ -1,0 +1,29 @@
+load("@rules_java//java:defs.bzl", "java_binary", "java_test")
+
+java_binary(
+    name = "catalog",
+    srcs = ["src/main/java/example/app/Main.java"],
+    deps = ["//libs/catalog:catalog"],
+    main_class = "example.app.Main",
+    tags = ["production"],
+    testonly = False,
+)
+
+java_binary(
+    name = "broken_release",
+    srcs = ["src/main/java/example/app/Main.java"],
+    data = ["//libs/testdata:catalog_fixture"],
+    deps = ["//libs/catalog:catalog"],
+    main_class = "example.app.Main",
+    tags = ["production"],
+    testonly = False,
+)
+
+java_test(
+    name = "catalog_test",
+    srcs = ["src/test/java/example/app/CatalogTest.java"],
+    data = ["//libs/testdata:catalog_fixture"],
+    deps = ["//libs/catalog:catalog"],
+    main_class = "example.app.CatalogTest",
+    use_testrunner = False,
+)

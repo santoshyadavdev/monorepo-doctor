@@ -3,6 +3,15 @@
 Question: can a change land without the tests that cover it running in CI?
 Inputs: `workspace.json` (`ciFiles`), `scan.json`. Output: `findings/ci-coverage.json`.
 
+These rules do not analyze Bazel test selection or Java test coverage. For a
+Bazel-only workspace (no JS/Nx packages), write
+`{"status":"skipped","reason":"Bazel CI and Java test coverage are not analyzed","findings":[]}`
+and stop this check. In a mixed workspace, retain applicable JS/Nx/Turbo
+findings but mark the check `partial` with reason `Bazel CI and Java test coverage are not analyzed`.
+If the only pre-landing test invocation is `bazel test` or `bazelisk test`,
+do not report `tests-not-run-in-ci`: its test selection is unverified, not
+proof that no tests run.
+
 ## Rules
 
 | id | severity | detect |

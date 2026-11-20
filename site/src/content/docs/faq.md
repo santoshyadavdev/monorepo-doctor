@@ -19,6 +19,10 @@ Any agent that supports the [Agent Skills](https://agentskills.io) format, inclu
 
 No. Plain npm, yarn, pnpm and bun workspaces are supported. Nx and Turborepo unlock extra caching and boundary rules.
 
+## Does Bazel need npm?
+
+No. The [Bazel Java example](/getting-started/#try-the-bazel-examples) has no npm workspace or `package.json`; building it needs Bazel and a Java toolchain. The audit itself uses Node.js, not npm or Bazel, for its limited static target checks. It does not analyze Java source cycles, Bazel caching or Bazel CI coverage.
+
 ## Do I need to install dependencies first?
 
 It's recommended, not required. Without `node_modules` or a local `nx`/`turbo`, the affected sub-checks are marked `partial` with a reason.

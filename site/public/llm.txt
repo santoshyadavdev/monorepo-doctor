@@ -1,6 +1,16 @@
 # Monorepo Skills
 
-For the generated documentation index and links to the complete agent documentation, see:
+monorepo-doctor audits JS/TS workspaces and performs limited static Bazel
+visibility and test-only dependency checks, including in standalone Java
+workspaces. Bazel support is partial: it does not analyze Java source cycles,
+Bazel caching or CI coverage. The audit requires Node.js but does not require
+npm or Bazel to inspect a standalone Bazel workspace.
+
+- Bazel reference: https://monorepo-skills.dev/skills/monorepo-doctor/references/bazel.md
+- Bazel Java example: https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/bazel-java
+- Getting started: https://monorepo-skills.dev/getting-started/#try-the-bazel-examples
+
+For the generated documentation index and complete agent documentation, see:
 
 - https://monorepo-skills.dev/llms.txt
 - https://monorepo-skills.dev/llms-small.txt

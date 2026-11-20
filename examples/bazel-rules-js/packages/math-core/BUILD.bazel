@@ -1,0 +1,15 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+
+js_library(
+    name = "rounding_internal",
+    srcs = ["src/internal/rounding.js"],
+    tags = ["internal"],
+    visibility = ["//visibility:public"],
+)
+
+js_library(
+    name = "math_core",
+    srcs = ["src/index.js"],
+    deps = [":rounding_internal"],
+    visibility = ["//apps/storefront:__pkg__"],
+)

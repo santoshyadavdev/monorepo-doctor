@@ -6,12 +6,12 @@ Agent skills that find — and then fix — the JS/TS monorepo problems teams ke
 
 | Skill | What it does |
 |---|---|
-| [`monorepo-doctor`](https://monorepo-skills.dev/skills/monorepo-doctor/) | Read-only audit: package boundaries, circular dependencies, task caching, CI test coverage, test code in production. Writes Markdown and JSON reports. |
+| [`monorepo-doctor`](https://monorepo-skills.dev/skills/monorepo-doctor/) | Read-only JS/TS audit plus limited static Bazel visibility and `testonly` checks, including standalone Java workspaces. Writes Markdown and JSON reports. |
 | [`monorepo-boundaries-cleanup`](https://monorepo-skills.dev/skills/monorepo-boundaries-cleanup/) | Refactoring workflow: pays boundary violations down in small PRs against a baseline, then stops for your CI report. |
 
 ## monorepo-doctor
 
-`monorepo-doctor` is a read-only AI agent skill for npm, yarn, pnpm, and bun workspaces, with deeper rules for Nx and Turborepo. It guides an agent through deterministic detection, source scanning, five independent audits, and an evidence-backed Markdown and JSON report.
+`monorepo-doctor` is a read-only AI agent skill for npm, yarn, pnpm, and bun workspaces, with deeper rules for Nx and Turborepo and limited Bazel target checks. It guides an agent through deterministic detection, source scanning, independent audits, and an evidence-backed Markdown and JSON report.
 
 Requires Node ≥ 22.5.
 
@@ -21,17 +21,21 @@ The companion skill [`monorepo-boundaries-cleanup`](skills/monorepo-boundaries-c
 
 | Check | What it looks for | Example finding ids |
 |---|---|---|
-| Package boundaries | Packages that are too large for their consumers (packages no other workspace package imports are never flagged), import through another package's internals, have knip unlisted/unused dependencies, lack Nx enforcement, or have invalid Turbo boundary configuration / reported violations. | `boundaries/deep-import`, `boundaries/nx-missing-module-boundaries-rule`, `boundaries/turbo-package-boundaries-tags`, `boundaries/turbo-tag-package-name-collision`, `boundaries/turbo-boundaries-violation` |
+| Package boundaries | Packages that are too large for their consumers (packages no other workspace package imports are never flagged), import through another package's internals, have knip unlisted/unused dependencies, lack Nx enforcement, have invalid Turbo boundary configuration / reported violations, or expose explicitly internal Bazel targets publicly. | `boundaries/deep-import`, `boundaries/nx-missing-module-boundaries-rule`, `boundaries/turbo-package-boundaries-tags`, `boundaries/turbo-tag-package-name-collision`, `boundaries/turbo-boundaries-violation`, `boundaries/bazel-public-internal-target` |
 | Circular dependencies | Package-level cycles and value-import file cycles, one finding per strongly connected group. File cycles are medium when a binding is read during module evaluation, low when every use is deferred, and skipped for idiomatic lazy ORM references. | `circular-deps/package-cycle`, `circular-deps/file-cycle` |
 | Task caching | Nx/Turbo cache configuration that can replay stale results or miss useful cache hits: missing outputs, undeclared env vars, volatile inputs, and dependency-blind test caches. | `caching/missing-outputs`, `caching/undeclared-env`, `caching/build-inputs-include-tests` |
 | CI test coverage | CI paths where tests silently do not run for changed code: no test command, shallow affected checkout, missing Nx base refs, invalid Turbo comparison ranges, or undeclared workspace dependencies. | `ci-coverage/tests-not-run-in-ci`, `ci-coverage/shallow-checkout-affected`, `ci-coverage/turbo-invalid-comparison-base`, `ci-coverage/turbo-test-missing-dependson` |
-| Production leakage | Test files, fixtures, compiled test outputs, or test libraries that can ship in package tarballs or deployable build outputs. | `prod-leakage/test-files-in-package`, `prod-leakage/test-files-in-build-output`, `prod-leakage/test-lib-in-dependencies` |
+| Production leakage | Test files, fixtures, compiled test outputs, or test libraries that can ship in package tarballs or deployable build outputs; production-tagged Bazel targets with invalid `testonly` dependencies. | `prod-leakage/test-files-in-package`, `prod-leakage/test-files-in-build-output`, `prod-leakage/test-lib-in-dependencies`, `prod-leakage/bazel-testonly-dependency` |
 
 Findings must be actionable: when the honest fix is "keep it as-is" (for example `cache: false` on a migration task), the skill notes it in the check's reason instead of reporting a finding.
 
 ## Supported workspaces
 
-The skill supports JavaScript and TypeScript monorepos using npm, yarn, pnpm, or bun workspaces. It discovers packages from `package.json#workspaces` and `pnpm-workspace.yaml`, then scans source imports, package manifests, CI files, and build/test configuration.
+The full audit supports JavaScript and TypeScript monorepos using npm, yarn, pnpm, or bun workspaces. It discovers packages from `package.json#workspaces` and `pnpm-workspace.yaml`, then scans source imports, package manifests, CI files, and build/test configuration.
+
+Bazel is also recognized from `MODULE.bazel` or a `WORKSPACE` file, including standalone Java workspaces without npm or `package.json`. The skill itself still needs Node.js for its read-only scripts. Its initial Bazel checks inspect literal local BUILD targets for `internal` tags exposed publicly and explicitly `production`-tagged, non-test targets depending on explicit `testonly` targets. The `internal` tag is a project convention, not a Bazel rule. Bazel normally blocks the latter dependency during analysis, so it is a build error, not proof of shipped test code.
+
+Bazel inspection is always `partial`: macros, selects, package groups, external dependencies and other dynamic graph features are not resolved. In a Bazel-only workspace, Java source, cycles, caching and CI test coverage are not analyzed; those checks are `skipped`, not reported clean. See the [Bazel reference](skills/monorepo-doctor/references/bazel.md) for the exact supported syntax.
 
 When Nx is present, it also reads `nx.json`, `project.json`, package `nx` targets, tags, target defaults, named inputs, and local Nx graph output when the local `nx` binary is installed. When Turborepo is present, it reads `turbo.json`, package-level Turbo overrides, dry-run metadata when local `turbo` is installed, and `turbo boundaries` output when available.
 
@@ -244,6 +248,26 @@ specs. Its README includes setup, suggested repairs, and a report-verification
 command using
 [`fixtures/expected/angular-nx.json`](fixtures/expected/angular-nx.json).
 
+### Bazel + rules_js audit fixture
+
+[`examples/bazel-rules-js`](examples/bazel-rules-js/) overlays Bazel
+`rules_js` targets on a small npm workspace. It seeds a JS deep import, an
+internal target with public visibility, and a production target depending on a
+`testonly` target. The Bazel checks are static and always report partial
+status.
+Its README has the audit prompt and report-verification command for
+[`fixtures/expected/bazel-rules-js.json`](fixtures/expected/bazel-rules-js.json).
+
+### Bazel + Java audit fixture
+
+[`examples/bazel-java`](examples/bazel-java/) is a standalone Bazel Java
+workspace with a runnable catalog app and test. It needs no npm workspace;
+the audit uses Node.js, while building uses Bazel and a Java toolchain. The
+fixture seeds a publicly visible internal target and an invalid production
+dependency on test-only data. Its README lists the valid run/test targets and
+the report-verification command for
+[`fixtures/expected/bazel-java.json`](fixtures/expected/bazel-java.json).
+
 Run the tooling with Node ≥ 22.5:
 
 ```bash
@@ -251,7 +275,7 @@ npm test
 npm run check
 ```
 
-Fixtures live under `fixtures/` and describe seeded monorepo problems for generic pnpm, Nx, and Turborepo workspaces. Expected findings live in `fixtures/expected/*.json`.
+Fixtures live under `fixtures/` and describe seeded monorepo problems for generic pnpm, Nx, Turborepo, and Bazel JS/Java workspaces. Expected findings live in `fixtures/expected/*.json`.
 
 The caching check includes `caching/nx-cache-disabled` and `caching/turbo-cache-disabled` for deterministic tasks explicitly configured not to cache; deliberately uncached tasks are excluded. The Nx fixture covers shared defaults, executor-key precedence, package targets, project overrides, and deliberate uncached tasks. Fixture contracts can select findings by `id` and optional `package` / `file` / `evidenceIncludes` (an array of required literal substrings, all matched in the finding's evidence); optional `mustNotFind` entries reject false positives at every severity (unlike `cleanPackages`, which allows low-severity findings).
 
