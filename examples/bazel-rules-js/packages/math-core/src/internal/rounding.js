@@ -1,3 +1,9 @@
+const formatter = new Intl.NumberFormat('en-US', {
+  useGrouping: false,
+  maximumFractionDigits: 2,
+  roundingMode: 'halfCeil',
+});
+
 export function roundMoney(amount) {
-  return Math.round((amount + Number.EPSILON) * 100) / 100;
+  return typeof amount === 'number' && !Number.isFinite(amount) ? amount : Number(formatter.format(amount));
 }

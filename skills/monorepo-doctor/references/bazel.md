@@ -51,10 +51,19 @@ const closing = { '(': ')', '[': ']', '{': '}' };
 
 function lex(text) {
   const out = [];
-  let i = 0, line = 1;
+  let i = 0, line = 1, logicalLine = 1, depth = 0;
   while (i < text.length) {
     const ch = text[i];
-    if (/\s/.test(ch)) { if (ch === '\n') line++; i++; continue; }
+    if (ch === '\\' && (text[i + 1] === '\n' || (text[i + 1] === '\r' && text[i + 2] === '\n'))) {
+      i += text[i + 1] === '\r' ? 3 : 2;
+      line++;
+      continue;
+    }
+    if (/\s/.test(ch)) {
+      if (ch === '\n') { line++; if (!depth) logicalLine++; }
+      i++;
+      continue;
+    }
     if (ch === '#') { while (i < text.length && text[i] !== '\n') i++; continue; }
     const start = i, startLine = line;
     if (ch === '"' || ch === "'") {
@@ -81,14 +90,16 @@ function lex(text) {
         }
       }
       if (!closed) throw new Error(`unterminated string at line ${startLine}`);
-      out.push({ type: valid ? 'string' : 'unknown', value, start, end: i, line: startLine });
+      out.push({ type: valid ? 'string' : 'unknown', value, start, end: i, line: startLine, logicalLine });
     } else if (/[A-Za-z_]/.test(ch)) {
       i++;
       while (i < text.length && /[A-Za-z0-9_]/.test(text[i])) i++;
-      out.push({ type: 'id', value: text.slice(start, i), start, end: i, line: startLine });
+      out.push({ type: 'id', value: text.slice(start, i), start, end: i, line: startLine, logicalLine });
     } else {
       i++;
-      out.push({ type: 'punct', value: ch, start, end: i, line: startLine });
+      out.push({ type: 'punct', value: ch, start, end: i, line: startLine, logicalLine });
+      if (closing[ch]) depth++;
+      else if ([')', ']', '}'].includes(ch)) depth--;
     }
   }
   return out;
@@ -121,7 +132,7 @@ function splitArgs(tokens) {
 function literal(tokens) {
   if (tokens.length === 1 && tokens[0].type === 'string') return tokens[0].value;
   if (tokens.length === 1 && tokens[0].type === 'id' && ['True', 'False'].includes(tokens[0].value)) return tokens[0].value === 'True';
-  if (tokens[0]?.value === '[' && groupEnd(tokens, 0) === tokens.length - 1) {
+  if (tokens[0]?.type === 'punct' && tokens[0].value === '[' && groupEnd(tokens, 0) === tokens.length - 1) {
     const parts = splitArgs(tokens.slice(1, -1));
     if (parts.every((p) => p.length === 1 && p[0].type === 'string')) return parts.map((p) => p[0].value);
   }
@@ -132,10 +143,11 @@ function calls(text) {
   const tokens = lex(text), result = [], loadTokens = new Set();
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
-    const lineHead = text.slice(text.lastIndexOf('\n', t.start - 1) + 1, t.start).trim();
-    if (t.type === 'id' && tokens[i + 1]?.type === 'punct' && tokens[i + 1].value === '(' && lineHead === '') {
+    const statementStart = i === 0 || tokens[i - 1].logicalLine !== t.logicalLine;
+    if (t.type === 'id' && tokens[i + 1]?.type === 'punct' && tokens[i + 1].value === '('
+        && tokens[i + 1].logicalLine === t.logicalLine && statementStart) {
       const end = groupEnd(tokens, i + 1);
-      if (tokens[end + 1]?.line !== tokens[end].line) {
+      if (tokens[end + 1]?.logicalLine !== tokens[end].logicalLine) {
         result.push({ name: t.value, line: t.line, parts: splitArgs(tokens.slice(i + 2, end)) });
         if (t.value === 'load') for (let j = i + 1; j < end; j++) loadTokens.add(j);
       }
@@ -190,7 +202,9 @@ function ruleKind(name, bindings) {
 }
 
 function label(value, pkg) {
-  if (typeof value !== 'string' || value.startsWith('@')) return null;
+  if (typeof value !== 'string') return null;
+  if (value.startsWith('@@//')) value = value.slice(2);
+  else if (value.startsWith('@')) return null;
   let dir = pkg, name = value;
   if (value.startsWith('//')) {
     const body = value.slice(2), colon = body.indexOf(':');

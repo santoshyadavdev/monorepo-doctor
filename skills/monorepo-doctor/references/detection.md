@@ -93,7 +93,7 @@ const prune = (p) => SKIP_NAMES.has(path.basename(String(p)));
 const orchestrators = [];
 if (exists('nx.json')) orchestrators.push({ name: 'nx', installed: exists('node_modules/.bin/nx') });
 if (exists('turbo.json')) orchestrators.push({ name: 'turbo', installed: exists('node_modules/.bin/turbo') });
-if (['MODULE.bazel', 'WORKSPACE', 'WORKSPACE.bazel'].some(exists)) orchestrators.push({ name: 'bazel' });
+if (['MODULE.bazel', 'WORKSPACE', 'WORKSPACE.bazel', 'REPO.bazel'].some(exists)) orchestrators.push({ name: 'bazel' });
 
 const bazelProblems = [];
 const bazelSkipped = new Set(['node_modules', '.git', '.nx', '.turbo', '.cache']);
@@ -219,7 +219,7 @@ node "$W/detect.mjs" "<workspace-root>"
 ## Interpreting the result
 
 - Exit code 2 / `NO_WORKSPACE`: no supported workspace packages or Bazel BUILD files were found. Stop and tell the user; do not produce a report.
-- `bazel.buildFiles` lists workspace-relative `BUILD.bazel` / `BUILD` files, preferring `BUILD.bazel` if both exist. Nested Bazel workspaces, symlinked directories, dependency directories, and `.bazelignore` paths are not traversed. Inventory errors are included in `bazel.errors` and make the Bazel checks partial. `REPO.bazel` `ignore_directories` patterns are not evaluated; when that name occurs in the file, or exclusions cannot be read, Bazel target findings are suppressed rather than guessed. A Bazel root with BUILD files is accepted without npm workspace packages; `packages` then stays empty, rather than inventing JavaScript packages.
+- `bazel.buildFiles` lists workspace-relative `BUILD.bazel` / `BUILD` files, preferring `BUILD.bazel` if both exist. Nested `MODULE.bazel` / `WORKSPACE` workspaces, symlinked directories, dependency directories, and `.bazelignore` paths are not traversed. A nested `REPO.bazel` alone does not exclude its directory from the parent workspace's packages. Inventory errors are included in `bazel.errors` and make the Bazel checks partial. `REPO.bazel` `ignore_directories` patterns are not evaluated; when that name occurs in the root file, or exclusions cannot be read, Bazel target findings are suppressed rather than guessed. A Bazel root with BUILD files is accepted without npm workspace packages; `packages` then stays empty, rather than inventing JavaScript packages.
 - A Bazel-only workspace has limited support: run the static Bazel boundary and test-only checks in [bazel.md](bazel.md); mark circular-deps, caching and CI coverage `skipped` with a reason because Java source, Bazel caches, and Bazel CI coverage are not analyzed. The two Bazel-aware checks remain `partial` because JS-specific subchecks and unresolved Bazel constructs are not covered.
 - `orchestrators[].installed: false`: never run nx / turbo (`npx` would download a different version). Use static config analysis only, and mark dependent sub-steps `partial`.
 - `tools.knip` / `tools.publint: false`: skip that tool and mark the check `partial` with reason `<tool> not installed locally`, unless the user explicitly allowed downloads (see SKILL.md).
