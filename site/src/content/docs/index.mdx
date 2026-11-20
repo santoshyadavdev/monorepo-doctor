@@ -42,6 +42,36 @@ npx skills add santoshyadavdev/monorepo-doctor
   </Card>
 </CardGrid>
 
+## Supported tools and technologies
+
+<CardGrid>
+  <Card title="Languages and frameworks" icon="document">
+    JavaScript and TypeScript workspaces, with runnable
+    [React + Turborepo](/getting-started/#try-the-react-and-turborepo-example) and
+    [Angular + Nx](/getting-started/#try-the-angular-and-nx-example) examples.
+  </Card>
+  <Card title="Package managers" icon="puzzle">
+    npm, Yarn, pnpm and Bun workspaces, discovered from `package.json` workspaces
+    or `pnpm-workspace.yaml`.
+  </Card>
+  <Card title="Monorepo tools" icon="rocket">
+    Nx and Turborepo get additional boundary, caching and CI checks.
+    Plain workspaces do not need either tool.
+  </Card>
+  <Card title="Bazel" icon="magnifier">
+    Limited static checks for public `internal`-tagged targets and
+    `production`-tagged targets with explicit `testonly = False` that depend on
+    `testonly = True` targets. Production targets that omit `testonly` are not
+    covered by the latter check. These checks include standalone Java workspaces.
+    Coverage is always partial: Java source, Bazel
+    caching and Bazel CI coverage are not analyzed. See the [Bazel reference](/reference/monorepo-doctor/bazel/).
+  </Card>
+</CardGrid>
+
+The audit requires Node.js 22.5 or later; inspecting a standalone Bazel workspace
+does not require npm or Bazel. Use an [Agent Skills-compatible agent](/getting-started/#requirements)
+such as GitHub Copilot CLI, Claude Code, Cursor or Codex.
+
 ## What gets missed
 
 <CardGrid>
