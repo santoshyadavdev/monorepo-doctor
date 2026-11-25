@@ -14,7 +14,7 @@ Prerequisites: Node ≥ 22.5. The work dir is `$W` = `$(node -p 'require("os").t
 
 ## Rules
 
-- **Read-only.** Never install dependencies, build, run tests, or edit project files. Allowed writes: `monorepo-doctor-report.md`, `monorepo-doctor-report.json` (default `<tmpdir>/monorepo-doctor-reports`, or a user-given dir) and `$W`.
+- **Read-only.** Never install dependencies, build, run tests, or edit project files. Allowed writes: `monorepo-doctor-report.md`, `monorepo-doctor-report.json` (default `${tmpdir}/monorepo-doctor-reports`, or a user-given dir) and `$W`.
 - Allowed commands: the snippets in the reference files, `npm pack --dry-run --json --ignore-scripts`, read-only `git log`, and the repo's own `./node_modules/.bin/{knip,publint,nx,turbo}` **only if** detection reports them installed (nx/turbo: graph / `--dry=json` / `boundaries` only — never real task runs, with read-only env vars from the references).
 - **No runtime downloads by default.** Don't fetch packages (`npx`, `npm exec`, `pnpm dlx`, `yarn dlx`, `bunx`). If a tool isn't installed, skip that sub-step and mark the check `partial`. Only if the user explicitly allows downloads in this request may you run the pinned `knip@6.41.0` / `publint@0.3.25` shown in the references — never other versions, other packages, or nx/turbo.
 - **Never abort a check.** If a tool fails, mark the check `partial` or `skipped` with a reason and continue.
@@ -27,14 +27,14 @@ Prerequisites: Node ≥ 22.5. The work dir is `$W` = `$(node -p 'require("os").t
 
 1. **Detect** — follow [references/detection.md](references/detection.md). Stop if `NO_WORKSPACE`.
 2. **Scan** — follow [references/scan.md](references/scan.md). If Bazel is detected, also run the static inspection in [references/bazel.md](references/bazel.md) before the checks.
-3. **Check** — run all five unless the user asked for a subset (write `{"status":"not-run","reason":"not requested","findings":[]}` to `$W/findings/<check>.json` for the others):
+3. **Check** — run all five unless the user asked for a subset (write `{"status":"not-run","reason":"not requested","findings":[]}` to `$W/findings/${check}.json` for the others):
    - [references/boundaries.md](references/boundaries.md) — package split & public API, including Bazel visibility
    - [references/circular-deps.md](references/circular-deps.md) — package and file cycles
    - [references/caching.md](references/caching.md) — Nx / Turborepo cache correctness
    - [references/ci-coverage.md](references/ci-coverage.md) — tests that silently don't run in CI
    - [references/prod-leakage.md](references/prod-leakage.md) — test code shipped to production
    The checks are independent; if you can run sub-agents, run them in parallel.
-4. **Report** — follow [references/report-format.md](references/report-format.md): validate each `findings/<check>.json`, render, then show the user where the reports were written, the summary line and the top 5 findings.
+4. **Report** — follow [references/report-format.md](references/report-format.md): validate each `findings/${check}.json`, render, then show the user where the reports were written, the summary line and the top 5 findings.
 5. **CI mode** (only if asked, or when invoked non-interactively with a threshold) — run the exit-code snippet from report-format.md.
 
 ## Tracking

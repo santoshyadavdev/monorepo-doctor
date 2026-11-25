@@ -1,7 +1,7 @@
 # Report format
 
-Every check writes one file: `$W/findings/<check>.json`
-where `<check>` is one of `boundaries`, `circular-deps`, `caching`, `ci-coverage`, `prod-leakage`.
+Every check writes one file: `$W/findings/${check}.json`
+where `${check}` is one of `boundaries`, `circular-deps`, `caching`, `ci-coverage`, `prod-leakage`.
 
 ```json
 {
@@ -21,7 +21,7 @@ where `<check>` is one of `boundaries`, `circular-deps`, `caching`, `ci-coverage
 ```
 
 - `ok`: check ran fully. `partial`: some sub-steps skipped (say which in `reason`).
-  `skipped`: check could not run at all. `not-run`: user scoped it out. A missing findings file is rendered as `skipped` with reason `no findings file`; for user-scoped-out checks, write an explicit `not-run` file at `$W/findings/<check>.json`.
+  `skipped`: check could not run at all. `not-run`: user scoped it out. A missing findings file is rendered as `skipped` with reason `no findings file`; for user-scoped-out checks, write an explicit `not-run` file at `$W/findings/${check}.json`.
 - `location.file` is relative to the workspace root. Include `package` whenever the finding belongs to one package.
 - Never emit a finding without `evidence`. If you are unsure, lower severity and say so in `evidence`; do not guess.
 - Use only the ids defined in the check reference files.
@@ -39,7 +39,7 @@ Severity may be lowered one level with a stated reason (e.g., package is private
 
 ## Render
 
-After all checks, run this snippet. It validates every findings file and fails loudly (`stderr`, exit 1) if a status is outside the enum, `reason` is missing for a non-`ok` status, a finding id does not start with `<check>/`, or evidence is missing/empty. Arguments: output directory (default: `$(node -p 'require("os").tmpdir()')/monorepo-doctor-reports`). The default is outside `$W` because detection wipes `$W`. Write into the audited repo only when the user gives that path explicitly.
+After all checks, run this snippet. It validates every findings file and fails loudly (`stderr`, exit 1) if a status is outside the enum, `reason` is missing for a non-`ok` status, a finding id does not start with `${check}/`, or evidence is missing/empty. Arguments: output directory (default: `$(node -p 'require("os").tmpdir()')/monorepo-doctor-reports`). The default is outside `$W` because detection wipes `$W`. Write into the audited repo only when the user gives that path explicitly.
 
 ```bash
 W="$(node -p 'require("os").tmpdir()')/monorepo-doctor"
