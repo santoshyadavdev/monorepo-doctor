@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polyrepo Tax Report</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface: #ffffff; --surface-2: #f6f6f4; --line: #e4e4e0;
+  --text: #191919; --text-2: #5f5f5b; --accent: #257de0; --track: #eef3fb;
+  --yes: #0a7d22; --no: #a55a00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface: #161616; --surface-2: #1f1f1f; --line: #333333;
+    --text: #efefef; --text-2: #a3a3a3; --accent: #338ced; --track: #1c2735;
+    --yes: #4cc363; --no: #e8a34c;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #161616; --surface-2: #1f1f1f; --line: #333333;
+  --text: #efefef; --text-2: #a3a3a3; --accent: #338ced; --track: #1c2735;
+  --yes: #4cc363; --no: #e8a34c;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 28px; margin: 0 0 4px; letter-spacing: -0.01em; }
+h2 { font-size: 20px; margin: 48px 0 12px; padding-top: 16px; border-top: 1px solid var(--line); }
+h3 { font-size: 16px; margin: 24px 0 8px; }
+h4, h5 { font-size: 15px; margin: 16px 0 6px; }
+p { margin: 8px 0; }
+code { font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+pre { background: var(--surface-2); padding: 12px; border-radius: 8px; overflow-x: auto; }
+a { color: var(--accent); }
+.muted { color: var(--text-2); }
+.meta { color: var(--text-2); margin: 0 0 24px; }
+.hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: stretch; }
+.hero-main, .tile { background: var(--surface-2); border-radius: 12px; padding: 20px; }
+.hero-label, .tile-label { color: var(--text-2); font-size: 13px; }
+.hero-value { font-size: 44px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1; margin: 6px 0; font-variant-numeric: tabular-nums; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.tile-value { font-size: 22px; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.tile-note { color: var(--text-2); font-size: 12px; }
+.verdict { margin: 16px 0 0; padding: 12px 16px; border-radius: 10px; background: var(--surface-2); border-left: 4px solid; }
+.verdict-yes { border-color: var(--yes); } .verdict-no { border-color: var(--no); }
+.range { position: relative; height: 56px; margin: 12px 8px 4px; }
+.range-axis { position: absolute; left: 0; right: 0; top: 18px; height: 1px; background: var(--line); }
+.range-span { position: absolute; top: 14px; height: 9px; border-radius: 5px; background: var(--track); }
+.range-dot { position: absolute; top: 9px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); cursor: default; }
+.range-tick { position: absolute; top: 12px; width: 2px; height: 13px; margin-left: -1px; background: var(--text-2); }
+.range-tick span { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 12px; color: var(--text-2); }
+.range-tick:first-of-type span { transform: none; left: 0; }
+.chart { margin: 8px 0 4px; }
+.bar-row { display: grid; grid-template-columns: minmax(140px, 34%) 1fr; gap: 12px; align-items: center; padding: 5px 0; border-radius: 6px; }
+.bar-row:hover, .bar-row:focus-visible { background: var(--surface-2); outline: none; }
+.bar-label { font-size: 13px; color: var(--text); text-align: right; }
+.bar-track { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bar { height: 20px; min-width: 2px; background: var(--accent); border-radius: 0 4px 4px 0; }
+.bar-value { font-size: 13px; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+thead th { color: var(--text-2); font-weight: 600; }
+tfoot th { border-bottom: 0; }
+.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.row-em td { font-weight: 600; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.filters button { font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--text); color: var(--surface); border-color: var(--text); }
+.bug { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 8px 0; }
+.bug summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.bug-title { font-weight: 600; flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; }
+.bug-repos { color: var(--text-2); font-size: 13px; }
+.cat { color: var(--text-2); }
+.badge { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); text-transform: capitalize; }
+.badge-high { background: var(--text); color: var(--surface); border-color: var(--text); }
+.commits { margin: 6px 0 0; padding-left: 18px; font-size: 13px; overflow-wrap: anywhere; }
+.groups, .clusters { padding-left: 20px; }
+.groups li, .clusters li { margin: 8px 0; overflow-wrap: anywhere; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 8px 0; }
+.plan { background: var(--surface-2); border-radius: 12px; padding: 4px 20px 12px; }
+#tip { position: fixed; pointer-events: none; z-index: 10; max-width: 320px; padding: 8px 10px; border-radius: 8px; font-size: 12px; background: var(--text); color: var(--surface); box-shadow: 0 4px 16px rgb(0 0 0 / .25); opacity: 0; }
+footer { margin-top: 48px; color: var(--text-2); font-size: 12px; }
+@media (max-width: 720px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-value { font-size: 36px; }
+  .bar-row { grid-template-columns: 1fr; gap: 2px; }
+  .bar-label { text-align: left; }
+}
+@media print {
+  #tip, .filters { display: none; }
+  .bug { break-inside: avoid; }
+  details.bug:not([open]) > *:not(summary) { display: block; }
+}
+</style>
+</head>
+<body>
+<main>
+<h1>Polyrepo Tax Report</h1>
+<p class="meta">4 repos (ui-lib, web-app, admin-app, docs-site) · 2025-11-01 → 2026-11-01 (365 days) · $100/dev-hour · USD 0.008/CI-minute</p>
+
+
+<section class="hero" aria-label="Headline numbers">
+  <div class="hero-main">
+    <div class="hero-label">Polyrepo tax per year, expected</div>
+    <div class="hero-value">$4,072</div>
+    <div class="muted">$1,471 – $4,072 depending on which bugs you count</div>
+    <div class="range" role="img" aria-label="Annualized cost range $1,471 to $4,072, expected $4,072">
+    <div class="range-axis"></div>
+    <div class="range-span" style="left:33.45%;width:calc(92.59% - 33.45%)"></div>
+    <div class="range-dot" style="left:92.59%" tabindex="0" data-tip="Expected (high + medium confidence bugs): $4,072/yr"></div>
+    <div class="range-tick" style="left:33.45%" data-tip="Low (high-confidence bugs only): $1,471/yr" tabindex="0"><span>Low $1,471</span></div>
+    <div class="range-tick" style="left:92.59%" data-tip="High (all bugs incl. low confidence): $4,072/yr" tabindex="0"><span>High $4,072</span></div>
+  </div>
+  </div>
+  <div class="tiles">
+    <div class="tile"><div class="tile-label">Developer time (window)</div><div class="tile-value">41 h</div><div class="tile-note">$4,070</div></div>
+    <div class="tile"><div class="tile-label">CI time (window)</div><div class="tile-value">225 min</div><div class="tile-note">$2 · assumed</div></div>
+    <div class="tile"><div class="tile-label">Bugs attributable to repo boundaries</div><div class="tile-value">4</div><div class="tile-note">1 high · 3 medium · 0 low confidence</div></div>
+    <div class="tile"><div class="tile-label">Migration payback</div><div class="tile-value">23.6 months</div><div class="tile-note">$7,600 one-time · saves $3,862/yr</div></div>
+  </div>
+</section>
+<p class="verdict verdict-yes">Migrating the coupled repos pays back in about 23.6 months at the expected estimate.</p>
+<p class="muted">Estimates from git history, not invoices. Every count links to commits below; every rate and assumption is listed at the end and can be overridden.</p>
+
+<h2>Where the money goes</h2>
+<p class="muted">Annualized cost per driver, expected scenario. Hover or focus a bar for hours and CI minutes.</p>
+<div class="chart"><div class="bar-row" tabindex="0" data-tip="Bugs: duplicated-fix: $1,000/yr · 1 event · 10 dev h · 45 CI min in window · monorepo removes 100%"><div class="bar-label">Bugs · duplicated-fix</div><div class="bar-track"><div class="bar" style="width:100.00%"></div><span class="bar-value">$1,000</span></div></div><div class="bar-row" tabindex="0" data-tip="Bugs: dependency-regression: $800/yr · 1 event · 8 dev h · 15 CI min in window · monorepo removes 90%"><div class="bar-label">Bugs · dependency-regression</div><div class="bar-track"><div class="bar" style="width:80.00%"></div><span class="bar-value">$800</span></div></div><div class="bar-row" tabindex="0" data-tip="Bugs: post-bump-fix: $800/yr · 1 event · 8 dev h · 15 CI min in window · monorepo removes 90%"><div class="bar-label">Bugs · post-bump-fix</div><div class="bar-track"><div class="bar" style="width:80.00%"></div><span class="bar-value">$800</span></div></div><div class="bar-row" tabindex="0" data-tip="Bugs: fix-propagation: $800/yr · 1 event · 8 dev h · 15 CI min in window · monorepo removes 100%"><div class="bar-label">Bugs · fix-propagation</div><div class="bar-track"><div class="bar" style="width:80.00%"></div><span class="bar-value">$800</span></div></div><div class="bar-row" tabindex="0" data-tip="Changes coordinated across repos: $200/yr · 1 event · 2 dev h · 15 CI min in window · monorepo removes 75%"><div class="bar-label">Changes coordinated across repos</div><div class="bar-track"><div class="bar" style="width:20.00%"></div><span class="bar-value">$200</span></div></div><div class="bar-row" tabindex="0" data-tip="Same tooling/dependency maintenance repeated per repo: $200/yr · 1 event · 2 dev h · 30 CI min in window · monorepo removes 100%"><div class="bar-label">Same tooling/dependency maintenance repeated per repo</div><div class="bar-track"><div class="bar" style="width:20.00%"></div><span class="bar-value">$200</span></div></div><div class="bar-row" tabindex="0" data-tip="Internal releases consumed by sibling repos: $150/yr · 3 events · 1.5 dev h · 45 CI min in window · monorepo removes 100%"><div class="bar-label">Internal releases consumed by sibling repos</div><div class="bar-track"><div class="bar" style="width:15.00%"></div><span class="bar-value">$150</span></div></div><div class="bar-row" tabindex="0" data-tip="Internal dependency bumps: $120/yr · 3 events · 1.2 dev h · 45 CI min in window · monorepo removes 100%"><div class="bar-label">Internal dependency bumps</div><div class="bar-track"><div class="bar" style="width:12.00%"></div><span class="bar-value">$120</span></div></div></div>
+<details><summary>Table view</summary><div class="table-wrap"><table><thead><tr><th>Cost driver</th><th class="n">Events</th><th class="n">Dev hours</th><th class="n">CI minutes</th><th class="n">Cost (window)</th><th class="n">Annualized</th><th class="n">Monorepo removes</th></tr></thead><tbody>
+    <tr><td>Internal dependency bumps</td><td class="n">3</td><td class="n">1.2</td><td class="n">45</td><td class="n">$120</td><td class="n">$120</td><td class="n">100%</td></tr><tr><td>Internal releases consumed by sibling repos</td><td class="n">3</td><td class="n">1.5</td><td class="n">45</td><td class="n">$150</td><td class="n">$150</td><td class="n">100%</td></tr><tr><td>Changes coordinated across repos</td><td class="n">1</td><td class="n">2</td><td class="n">15</td><td class="n">$200</td><td class="n">$200</td><td class="n">75%</td></tr><tr><td>Same tooling/dependency maintenance repeated per repo</td><td class="n">1</td><td class="n">2</td><td class="n">30</td><td class="n">$200</td><td class="n">$200</td><td class="n">100%</td></tr><tr><td>Bugs: dependency-regression</td><td class="n">1</td><td class="n">8</td><td class="n">15</td><td class="n">$800</td><td class="n">$800</td><td class="n">90%</td></tr><tr><td>Bugs: post-bump-fix</td><td class="n">1</td><td class="n">8</td><td class="n">15</td><td class="n">$800</td><td class="n">$800</td><td class="n">90%</td></tr><tr><td>Bugs: fix-propagation</td><td class="n">1</td><td class="n">8</td><td class="n">15</td><td class="n">$800</td><td class="n">$800</td><td class="n">100%</td></tr><tr><td>Bugs: duplicated-fix</td><td class="n">1</td><td class="n">10</td><td class="n">45</td><td class="n">$1,000</td><td class="n">$1,000</td><td class="n">100%</td></tr><tr><td>Bugs: cross-repo-fix</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">$0</td><td class="n">$0</td><td class="n">50%</td></tr>
+    </tbody><tfoot><tr><th>Total</th><th></th><th class="n">40.7</th><th class="n">225</th><th class="n">$4,072</th><th class="n">$4,072</th><th class="n">$3,862/yr</th></tr></tfoot></table></div></details>
+<h3>Scenarios</h3>
+<div class="table-wrap"><table><thead><tr><th>Scenario</th><th>Bugs counted</th><th class="n">Window cost</th><th class="n">Annualized</th><th class="n">Annual savings</th><th class="n">Payback</th></tr></thead><tbody>
+    <tr><td>low</td><td>high confidence only</td><td class="n">$1,471</td><td class="n">$1,471</td><td class="n">$1,341</td><td class="n">68 mo</td></tr><tr class="row-em"><td>expected</td><td>high + medium</td><td class="n">$4,072</td><td class="n">$4,072</td><td class="n">$3,862</td><td class="n">23.6 mo</td></tr><tr><td>high</td><td>high + medium + low</td><td class="n">$4,072</td><td class="n">$4,072</td><td class="n">$3,862</td><td class="n">23.6 mo</td></tr></tbody></table></div>
+
+<h2>Bugs attributable to repo boundaries</h2>
+<div class="filters" role="group" aria-label="Filter by confidence">
+  <button type="button" data-filter="all" aria-pressed="true">All 4</button>
+  <button type="button" data-filter="high" aria-pressed="false">● High 1</button><button type="button" data-filter="medium" aria-pressed="false">◐ Medium 3</button><button type="button" data-filter="low" aria-pressed="false">○ Low 0</button>
+</div>
+<div id="bugs"><details class="bug" data-conf="high">
+      <summary><span class="badge badge-high"><span aria-hidden="true">●</span> high</span><code class="cat">dependency-regression</code><span class="bug-title">web-app rolled back @acme/ui ^2.0.0 → ^1.1.0</span><span class="bug-repos">web-app</span></summary>
+      <p>An internal release broke a consumer after it shipped. In a monorepo the producer change runs the consumer&#39;s tests before merge.</p>
+      <ul class="commits"><li><code>web-app@3f66365afc</code> <span class="muted">2026-03-05</span> Revert &quot;chore: bump @acme/ui to 2.0.0&quot;</li></ul>
+    </details><details class="bug" data-conf="medium">
+      <summary><span class="badge badge-medium"><span aria-hidden="true">◐</span> medium</span><code class="cat">duplicated-fix</code><span class="bug-title">fix: date parsing in timezone offsets</span><span class="bug-repos">ui-lib, web-app, admin-app</span></summary>
+      <p>The same fix was applied in 3 repos: duplicated code, or a shared contract that has to be fixed everywhere.</p>
+      <ul class="commits"><li><code>ui-lib@63bbf03f8b</code> <span class="muted">2026-04-10</span> fix: date parsing in timezone offsets</li><li><code>web-app@c269396291</code> <span class="muted">2026-04-11</span> fix: date parsing in timezone offsets</li><li><code>admin-app@e993c0a699</code> <span class="muted">2026-04-12</span> fix(date): date parsing in timezone offsets</li></ul>
+    </details><details class="bug" data-conf="medium">
+      <summary><span class="badge badge-medium"><span aria-hidden="true">◐</span> medium</span><code class="cat">post-bump-fix</code><span class="bug-title">fix: adapt checkout to @acme/ui Button API</span><span class="bug-repos">web-app, ui-lib</span></summary>
+      <p>Fix landed 2 days after web-app bumped @acme/ui ^1.1.0 → ^2.0.0 and names that package.</p>
+      <ul class="commits"><li><code>web-app@d56547a5d4</code> <span class="muted">2026-03-10</span> chore: bump @acme/ui to 2.0.0 with Button migration <span class="muted">(context)</span></li><li><code>web-app@1938bd7e0e</code> <span class="muted">2026-03-12</span> fix: adapt checkout to @acme/ui Button API</li></ul>
+    </details><details class="bug" data-conf="medium">
+      <summary><span class="badge badge-medium"><span aria-hidden="true">◐</span> medium</span><code class="cat">fix-propagation</code><span class="bug-title">fix: pick up money rounding from ui 2.1</span><span class="bug-repos">web-app, ui-lib</span></summary>
+      <p>The fix reached web-app only after a release of @acme/ui and a version bump.</p>
+      <ul class="commits"><li><code>web-app@2dcff72d1f</code> <span class="muted">2026-06-05</span> fix: pick up money rounding from ui 2.1</li></ul>
+    </details></div>
+
+<h2>Internal dependency churn</h2>
+<div class="stats">
+  <div class="tile"><div class="tile-label">Internal bumps</div><div class="tile-value">4</div><div class="tile-note">1 by bots · 3 by people</div></div>
+  <div class="tile"><div class="tile-label">Internal releases to move code</div><div class="tile-value">3</div><div class="tile-note">packages consumed by sibling repos</div></div>
+  <div class="tile"><div class="tile-label">Median release → bump lag</div><div class="tile-value">3 days</div><div class="tile-note">time a consumer runs old code</div></div>
+  <div class="tile"><div class="tile-label">Consumers behind today</div><div class="tile-value">1</div><div class="tile-note">1 a major version or more</div></div>
+</div>
+<div class="table-wrap"><table><thead><tr><th>Internal package</th><th>Producer</th><th>Consumers</th><th class="n">Bumps</th><th class="n">Releases</th></tr></thead><tbody>
+    <tr><td><code>@acme/ui</code></td><td>ui-lib</td><td>web-app, admin-app</td><td class="n">4</td><td class="n">3</td></tr></tbody></table></div>
+<h3>Version skew today</h3><ul><li><code>@acme/ui</code>: v1 in admin-app · v2 in web-app</li></ul>
+
+<h2>Duplicated and coordinated work</h2>
+<ul class="groups"><li><strong>Coordinated change</strong> <span class="muted">ui-lib, web-app</span><br>PAY-42 add currency field to Money type<br><span class="muted"><code>ui-lib@bebd912d74</code> <code>web-app@326fe5c05d</code></span></li><li><strong>Repeated maintenance ×3</strong> <span class="muted">ui-lib, web-app, admin-app</span><br>ci: bump node to 22<br><span class="muted"><code>ui-lib@6bbb1f32c4</code> <code>web-app@2ea08646f0</code> <code>admin-app@831871fc08</code></span></li></ul>
+
+<h2>Migration</h2>
+<p><strong>Recommended tooling:</strong> pnpm workspaces + Nx or Turborepo <span class="muted">(js/ts 10 files)</span></p>
+<h3>Clusters to migrate, heaviest first</h3>
+<ol class="clusters"><li><strong>admin-app, ui-lib, web-app</strong> <span class="muted">coupling weight 25</span></li></ol>
+<p><strong>Keep separate</strong> (no measured coupling): docs-site</p>
+<p><strong>One-time effort:</strong> ~9.5 dev-days ($7,600) for 3 repos · <strong>payback</strong> ~23.6 months <span class="muted">(range 23.6 – 68 months)</span></p>
+<h3>Coupling between repos</h3><div class="table-wrap"><table><thead><tr><th>Repo pair</th><th class="n">Internal deps</th><th class="n">Bumps</th><th class="n">Coordinated changes</th><th class="n">Bugs</th><th class="n">Weight</th><th class="n">Repeated tooling (not weighted)</th></tr></thead><tbody>
+    <tr><td>ui-lib ↔ web-app</td><td class="n">1</td><td class="n">5</td><td class="n">1</td><td class="n">3</td><td class="n">17</td><td class="n">1</td></tr><tr><td>admin-app ↔ ui-lib</td><td class="n">1</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n">5</td><td class="n">1</td></tr><tr><td>admin-app ↔ web-app</td><td class="n">0</td><td class="n">0</td><td class="n">0</td><td class="n">1</td><td class="n">3</td><td class="n">1</td></tr></tbody></table></div>
+<h3>External dependencies to align first</h3>
+<div class="table-wrap"><table><thead><tr><th>External dependency</th><th>Majors in use</th></tr></thead><tbody>
+    <tr><td><code>react</code></td><td>v17 <span class="muted">(admin-app)</span> · v18 <span class="muted">(ui-lib, web-app)</span></td></tr></tbody></table></div>
+<h3>Migration plan</h3><div class="plan"><ol>
+<li><strong>Target layout and tooling</strong> — pnpm workspaces + Turborepo: <code>packages/ui</code> (from <code>ui-lib</code>), <code>apps/web</code> (from <code>web-app</code>), <code>apps/admin</code> (from <code>admin-app</code>). <code>docs-site</code> stays in its own repo: no shared packages, co-changes or shared bugs in the window.</li>
+<li><strong>Phase 0 — prepare (no repo moves).</strong></li>
+</ol>
+<ul>
+<li>Upgrade <code>react</code> from v17 to v18 in <code>admin-app</code>, in its own PR.</li>
+<li>Agree on pnpm, one Node version and one lint/format config.</li>
+<li>No new internal packages outside the monorepo.</li>
+</ul>
+<ol>
+<li><strong>Phase 1 — import with history.</strong> <code>ui-lib</code> first, then <code>web-app</code> and <code>admin-app</code>, each with <code>git subtree add --prefix=&lt;dest&gt; &lt;repo-url&gt; main</code>.</li>
+</ol>
+<ul>
+<li>Replace <code>@acme/ui</code> version ranges with <code>workspace:*</code> and drop its publish step.</li>
+<li>CI runs <code>turbo run test --affected</code> so a change to <code>packages/ui</code> runs both apps&#39; tests before merge.</li>
+<li>Move CODEOWNERS entries under each new directory; archive the old repos once open PRs are merged or moved.</li>
+</ul>
+<ol>
+<li><strong>Verify</strong> — run <code>monorepo-doctor</code> on the new monorepo, then <code>monorepo-boundaries-cleanup</code> for what it finds.</li>
+</ol>
+<div class="table-wrap"><table><thead><tr><th>Phase</th><th>Repos</th><th>Effort</th></tr></thead><tbody><tr><td>0</td><td>admin-app</td><td>0.5 dev-days</td></tr><tr><td>1</td><td>ui-lib, web-app, admin-app</td><td>9 dev-days</td></tr></tbody></table></div>
+<p>Risks: CI capacity during the transition, mistakes in the history import, and ownership of <code>packages/ui</code>.</p></div>
+
+<h2>Assumptions</h2>
+<div class="table-wrap"><table><thead><tr><th>Assumption</th><th class="n">Value</th></tr></thead><tbody>
+    <tr><td><code>bumpHumanHours</code></td><td class="n">0.5</td></tr><tr><td><code>bumpBotHours</code></td><td class="n">0.2</td></tr><tr><td><code>releaseHours</code></td><td class="n">0.5</td></tr><tr><td><code>coordinationHoursPerExtraRepo</code></td><td class="n">2</td></tr><tr><td><code>duplicateChangeHoursPerCopy</code></td><td class="n">1</td></tr><tr><td><code>bugHours</code></td><td class="n">8</td></tr><tr><td><code>ciMinutesPerCommit</code></td><td class="n">15</td></tr><tr><td><code>bumpFixWindowDays</code></td><td class="n">7</td></tr><tr><td><code>groupWindowDays</code></td><td class="n">14</td></tr><tr><td><code>similarity</code></td><td class="n">0.75</td></tr><tr><td><code>migrationDaysPerRepo</code></td><td class="n">3</td></tr><tr><td><code>migrationDaysPerConflict</code></td><td class="n">0.5</td></tr><tr><td><code>monorepoToolingMonthly</code></td><td class="n">0</td></tr>
+    <tr><td><code>developerHourly</code></td><td class="n">$100</td></tr>
+    <tr><td><code>ciPerMinute</code></td><td class="n">USD 0.008</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Repo</th><th class="n">Commits</th><th>Stack</th><th class="n">CI min/commit</th><th>CI source</th></tr></thead><tbody>
+    <tr><td>ui-lib</td><td class="n">8</td><td>—</td><td class="n">15</td><td>assumed</td></tr><tr><td>web-app</td><td class="n">11</td><td>—</td><td class="n">15</td><td>assumed</td></tr><tr><td>admin-app</td><td class="n">3</td><td>—</td><td class="n">15</td><td>assumed</td></tr><tr><td>docs-site</td><td class="n">3</td><td>—</td><td class="n">15</td><td>assumed</td></tr></tbody></table></div>
+
+<footer>Generated 2026-11-01T00:00:00Z by the polyrepo-tax skill. Full data: polyrepo-tax-report.json.</footer>
+</main>
+<div id="tip" role="tooltip"></div>
+<script>
+(() => {
+  const tip = document.getElementById('tip');
+  const show = (el, x, y) => {
+    tip.textContent = el.dataset.tip;
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.max(8, Math.min(x + 12, innerWidth - w - 8)) + 'px';
+    tip.style.top = Math.max(8, y - h - 12) + 'px';
+    tip.style.opacity = 1;
+  };
+  const hide = () => { tip.style.opacity = 0; };
+  for (const el of document.querySelectorAll('[data-tip]')) {
+    el.addEventListener('pointermove', (ev) => show(el, ev.clientX, ev.clientY));
+    el.addEventListener('pointerleave', hide);
+    el.addEventListener('focus', () => { const b = el.getBoundingClientRect(); show(el, b.left + 16, b.top); });
+    el.addEventListener('blur', hide);
+  }
+  const buttons = document.querySelectorAll('.filters button');
+  for (const btn of buttons) btn.addEventListener('click', () => {
+    for (const b of buttons) b.setAttribute('aria-pressed', String(b === btn));
+    for (const card of document.querySelectorAll('#bugs .bug')) card.hidden = btn.dataset.filter !== 'all' && card.dataset.conf !== btn.dataset.filter;
+  });
+})();
+</script>
+</body>
+</html>
