@@ -274,3 +274,8 @@ test('html: invalid currency codes cannot inject markup; verdict agrees with pay
   assert.ok(!html.includes('does not pay back a migration within two years'));
   assert.ok(html.includes('Payback is about 12 months, but no cluster'));
 });
+
+test('the sample report served by the docs site matches the analyzer output', async () => {
+  const { buildSample, SAMPLE } = await import('./build-polyrepo-sample.mjs');
+  assert.equal(fs.readFileSync(SAMPLE, 'utf8'), buildSample(), 'stale: run node scripts/build-polyrepo-sample.mjs');
+});

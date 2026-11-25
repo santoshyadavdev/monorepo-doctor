@@ -11,6 +11,14 @@ No. It doesn't install, build, run tests or edit files. It writes two report fil
 
 No. It opens one PR per batch and stops. Merging is always yours, even if you tell it to "just get it merged".
 
+## Does polyrepo-tax change my repositories?
+
+No. It clones them as bare repositories into your temp directory and runs only read-only `git` commands, plus optional `gh api` GET requests for GitHub Actions minutes. See the [walkthrough](/guides/polyrepo-to-monorepo/).
+
+## Will polyrepo-tax always recommend a monorepo?
+
+No. When the measured tax doesn't pay back the migration within about two years, or the repos barely depend on each other, it says not to migrate and suggests cheaper fixes. Its dollar figures are estimates from assumptions it prints and you can override.
+
 ## Which agents does it work with?
 
 Any agent that supports the [Agent Skills](https://agentskills.io) format, including Claude Code, GitHub Copilot CLI, Cursor and Codex.

@@ -10,6 +10,17 @@ npm or Bazel to inspect a standalone Bazel workspace.
 - Bazel Java example: https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/bazel-java
 - Getting started: https://monorepo-skills.dev/getting-started/#try-the-bazel-examples
 
+polyrepo-tax prices what splitting code across several repositories costs:
+bugs attributable to repo boundaries (with confidence and commit evidence),
+developer and CI time spent on internal bumps, releases, coordinated changes
+and repeated maintenance, converted to a low/expected/high money range. It
+plans a monorepo migration only for coupled repos that pay it back, and says
+not to migrate otherwise. It is read-only and writes HTML, Markdown and JSON.
+
+- Skill: https://monorepo-skills.dev/skills/polyrepo-tax/SKILL.md
+- Walkthrough: https://monorepo-skills.dev/guides/polyrepo-to-monorepo/
+- Sample report: https://monorepo-skills.dev/examples/polyrepo-tax-report.html
+
 For the generated documentation index and complete agent documentation, see:
 
 - https://monorepo-skills.dev/llms.txt

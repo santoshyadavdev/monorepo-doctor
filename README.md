@@ -32,7 +32,17 @@ The companion skill [`monorepo-boundaries-cleanup`](skills/monorepo-boundaries-c
 Use polyrepo-tax on acme/web-app, acme/admin-app, acme/ui-lib and acme/api-client for the last 12 months. Our loaded cost is $120/hour.
 ```
 
-It writes `polyrepo-tax-report.html` (a self-contained page to share with leadership: headline range, cost chart, filterable bugs with commit evidence, migration plan), plus Markdown and JSON.
+It writes `polyrepo-tax-report.html` (a self-contained page to share with leadership: headline range, cost chart, filterable bugs with commit evidence, migration plan), plus Markdown and JSON. See the [sample report](https://monorepo-skills.dev/examples/polyrepo-tax-report.html) and the [walkthrough](https://monorepo-skills.dev/guides/polyrepo-to-monorepo/).
+
+| Bug category | Confidence | Detected when |
+|---|---|---|
+| `dependency-regression` | high | A repo downgrades an internal dependency or reverts a bump of it. |
+| `duplicated-fix` | medium | Near-identical fix commits land in two or more repos within two weeks. |
+| `cross-repo-fix` | medium | Fix commits in two or more repos share a ticket key. |
+| `fix-propagation` | medium | A fix commit is itself an internal dependency bump. |
+| `post-bump-fix` | medium / low | A fix lands within a week of an internal bump and names the package or a compatibility break; low only right after a major bump. |
+
+Counts are a floor: bugs fixed without a fix-like commit subject are invisible to git history. Money is `developer hours × loaded rate + CI minutes × CI price`, from documented per-event assumptions the report prints and you can override. Savings and payback only count the repos that would move.
 
 The analyzer (`skills/polyrepo-tax/scripts/analyze.mjs`) is a dependency-free Node script that runs only read-only `git` commands, and also works standalone:
 
@@ -88,9 +98,9 @@ Install from the repository with:
 npx skills add santoshyadavdev/monorepo-doctor
 ```
 
-The CLI lets you pick which skills to install. To install one directly, add `--skill monorepo-doctor` or `--skill monorepo-boundaries-cleanup`.
+The CLI lets you pick which skills to install. To install one directly, add `--skill monorepo-doctor`, `--skill monorepo-boundaries-cleanup` or `--skill polyrepo-tax`.
 
-Manual installation is also supported. Copy `skills/monorepo-doctor` (and/or `skills/monorepo-boundaries-cleanup`) into one of these locations:
+Manual installation is also supported. Copy `skills/monorepo-doctor`, `skills/monorepo-boundaries-cleanup` and/or `skills/polyrepo-tax` (including its `scripts/` folder) into one of these locations:
 
 - `~/.claude/skills/` for Claude Code
 - `~/.copilot/skills/` for Copilot CLI
@@ -114,6 +124,12 @@ Pay down boundary violations, one batch per PR:
 
 ```text
 Use monorepo-boundaries-cleanup to fix the next batch of turbo boundaries violations.
+```
+
+Price your polyrepo setup and decide whether to migrate:
+
+```text
+Use polyrepo-tax on acme/web-app, acme/admin-app and acme/ui-lib for the last 12 months. Our loaded cost is $120/hour.
 ```
 
 Use CI mode when the report should fail a run at a severity threshold:
@@ -319,6 +335,17 @@ Optional `checks` entries match `report.checks` by `check` and require the speci
 ```text
 ✓ monorepo-boundaries-cleanup is consistent
 ✓ monorepo-doctor is consistent
+✓ polyrepo-tax is consistent
+```
+
+### polyrepo-tax fixture and sample report
+
+[`fixtures/polyrepo/make-fixture.mjs`](fixtures/polyrepo/make-fixture.mjs) builds four small git repositories with dated history: a UI library, two apps that consume it, and an unrelated docs site. It seeds a reverted bump, a fix copied into three repos, a post-bump fix, a fix that ships through a bump, a ticket split across repos, a CI change repeated per repo, and a React 17/18 conflict. `scripts/polyrepo-tax.test.mjs` asserts what the analyzer finds in it.
+
+The docs site serves a sample report built from that fixture at [`site/public/examples/polyrepo-tax-report.html`](site/public/examples/polyrepo-tax-report.html). Regenerate it after changing the analyzer or renderer; `npm test` fails while it is stale:
+
+```bash
+node scripts/build-polyrepo-sample.mjs
 ```
 
 ### Docs site
