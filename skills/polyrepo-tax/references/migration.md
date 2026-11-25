@@ -10,7 +10,7 @@ Write the plan from the report's `migration` section. Use only facts from the re
 
 ## Plan template
 
-Append this under `## Migration plan` in the Markdown report, filled in:
+Write this to `migration-plan.md` in the report directory, filled in, append it to `polyrepo-tax-report.md`, then re-render the HTML report (`render-html.mjs` embeds `migration-plan.md` from the same directory):
 
 1. **Target layout and tooling** — `migration.recommendedTool`. Propose `apps/<repo>` for deployables and `packages/<name>` for libraries. If one repo already uses Nx, Turborepo or Bazel, build on it rather than adding a second tool.
 2. **Phase 0 — prepare (no repo moves).**

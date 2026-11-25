@@ -41,7 +41,7 @@ After a migration, run [monorepo-doctor](/skills/monorepo-doctor/) on the new mo
 
 ## Output
 
-`polyrepo-tax-report.md` and `polyrepo-tax-report.json` in `${tmpdir}/polyrepo-tax-reports`, or a directory you name. The Markdown report has the headline range, a cost table per driver, every bug with commit evidence, internal-dependency churn and version skew, migration inputs and the assumptions used.
+`polyrepo-tax-report.html`, `polyrepo-tax-report.md` and `polyrepo-tax-report.json` in `${tmpdir}/polyrepo-tax-reports`, or a directory you name. The HTML report is one self-contained file (no network requests, light and dark mode, printable) meant for sharing: headline range and KPI tiles, an annualized cost-by-driver chart with a table view, bugs filterable by confidence, and the migration plan once the agent has written it. The Markdown report has the headline range, a cost table per driver, every bug with commit evidence, internal-dependency churn and version skew, migration inputs and the assumptions used.
 
 ## Run the analyzer directly
 

@@ -1,8 +1,9 @@
 # Step 6 — Report
 
-The analyzer writes two files to the output directory (default `${tmpdir}/polyrepo-tax-reports`):
+The analyzer writes three files to the output directory (default `${tmpdir}/polyrepo-tax-reports`):
 
-- `polyrepo-tax-report.md` — the human report; step 5 appends `## Migration plan`.
+- `polyrepo-tax-report.html` — the shareable report: headline range, cost-by-driver chart, filterable bug list with commit evidence, churn, migration and assumptions. One self-contained file with no network requests, light and dark mode, printable. Re-render it with `render-html.mjs` after writing `migration-plan.md`.
+- `polyrepo-tax-report.md` — the same content as Markdown; step 5 appends the migration plan.
 - `polyrepo-tax-report.json` — the full data.
 
 ## JSON shape (version 1)
@@ -22,7 +23,7 @@ The analyzer writes two files to the output directory (default `${tmpdir}/polyre
 
 Keep the message short; the report has the detail.
 
-1. Paths of both reports.
+1. Paths of the reports; suggest the HTML file for sharing with leadership. It contains repo names, commit subjects and SHAs, so it is as confidential as the repos.
 2. One line: expected cost for the window and annualized range, split into developer and CI money.
 3. Bug counts by confidence, and the 3 strongest bugs, each with its commit evidence.
 4. The two cost drivers that dominate, and the assumption each depends on, so the user knows which number to challenge.

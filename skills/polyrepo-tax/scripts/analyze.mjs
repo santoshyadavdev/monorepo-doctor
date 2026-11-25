@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { renderHtml } from './render-html.mjs';
 
 export const DEFAULT_ASSUMPTIONS = {
   // Developer hours per event. Every value is user-overridable and printed in the report.
@@ -708,8 +709,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     fs.mkdirSync(out, { recursive: true });
     fs.writeFileSync(path.join(out, 'polyrepo-tax-report.json'), JSON.stringify(report, null, 2));
     fs.writeFileSync(path.join(out, 'polyrepo-tax-report.md'), renderMarkdown(report));
+    fs.writeFileSync(path.join(out, 'polyrepo-tax-report.html'), renderHtml(report));
     const e = report.cost.expected.totals;
-    console.log(`wrote ${path.join(out, 'polyrepo-tax-report.md')} and .json`);
+    console.log(`wrote ${path.join(out, 'polyrepo-tax-report')}.{md,json,html}`);
     console.log(`expected: ${e.hours} dev hours + ${e.ciMinutes} CI minutes = ${report.rates.currency} ${e.cost} in ${report.window.days} days; ${report.bugs.length} candidate bugs`);
     for (const p of report.problems) console.error(`WARN: ${p}`);
   } catch (err) {

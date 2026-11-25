@@ -32,6 +32,8 @@ The companion skill [`monorepo-boundaries-cleanup`](skills/monorepo-boundaries-c
 Use polyrepo-tax on acme/web-app, acme/admin-app, acme/ui-lib and acme/api-client for the last 12 months. Our loaded cost is $120/hour.
 ```
 
+It writes `polyrepo-tax-report.html` (a self-contained page to share with leadership: headline range, cost chart, filterable bugs with commit evidence, migration plan), plus Markdown and JSON.
+
 The analyzer (`skills/polyrepo-tax/scripts/analyze.mjs`) is a dependency-free Node script that runs only read-only `git` commands, and also works standalone:
 
 ```bash

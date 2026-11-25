@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { analyze, renderMarkdown, isFixSubject, normalizeSubject, similarity, ticketsOf, minVersion } from '../skills/polyrepo-tax/scripts/analyze.mjs';
+import { renderHtml, markdownToHtml } from '../skills/polyrepo-tax/scripts/render-html.mjs';
 import { monthRanges } from '../skills/polyrepo-tax/scripts/fetch-ci.mjs';
 import { makeFixture } from '../fixtures/polyrepo/make-fixture.mjs';
 
@@ -123,4 +124,24 @@ test('markdown report carries the range, bugs, assumptions and migration inputs'
 
 test('monthRanges splits the window per calendar month', () => {
   assert.deepEqual(monthRanges('2026-01-15', '2026-03-10'), ['2026-01-15..2026-01-31', '2026-02-01..2026-02-28', '2026-03-01..2026-03-09']);
+});
+
+test('html report is self-contained, escaped and embeds the plan', () => {
+  const html = renderHtml(report, { plan: '## Migration plan\n\n1. **Phase 0** align `react`\n' });
+  assert.match(html, /^<!doctype html>/);
+  assert.doesNotMatch(html, /<script[^>]+src=|<link[^>]+href=|https?:\/\/(?!github\.com)/, 'no external resources');
+  for (const s of ['Polyrepo tax per year, expected', 'dependency-regression', 'data-filter="high"', 'docs-site', '<strong>Phase 0</strong>', 'prefers-color-scheme: dark']) {
+    assert.ok(html.includes(s), `missing ${s}`);
+  }
+  assert.equal((html.match(/>Migration plan</g) ?? []).length, 1, 'plan heading is not duplicated');
+  const hostile = structuredClone(report);
+  hostile.bugs[0].title = '<img src=x onerror=alert(1)>';
+  assert.ok(!renderHtml(hostile).includes('<img src=x'), 'commit text is escaped');
+});
+
+test('markdownToHtml escapes HTML and renders tables and code', () => {
+  const out = markdownToHtml('<b>x</b>\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n```\n<tag>\n```');
+  assert.ok(out.includes('&lt;b&gt;x&lt;/b&gt;'));
+  assert.ok(out.includes('<td>1</td><td>2</td>'));
+  assert.ok(out.includes('<pre><code>&lt;tag&gt;</code></pre>'));
 });
