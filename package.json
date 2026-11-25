@@ -2,7 +2,7 @@
   "name": "monorepo-doctor",
   "private": true,
   "type": "module",
-  "description": "Agent skills for JS/TS monorepos and limited Bazel target audits: monorepo-doctor checks boundaries, cycles, caching, CI coverage and test leakage; monorepo-boundaries-cleanup pays boundary violations down in small PRs.",
+  "description": "Agent skills for JS/TS monorepos and limited Bazel target audits: monorepo-doctor checks boundaries, cycles, caching, CI coverage and test leakage; monorepo-boundaries-cleanup pays boundary violations down in small PRs; polyrepo-tax prices what a polyrepo setup costs and plans the migration.",
   "homepage": "https://monorepo-skills.dev",
   "license": "MIT",
   "engines": { "node": ">=22.5" },

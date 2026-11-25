@@ -8,6 +8,7 @@ Agent skills that find — and then fix — the JS/TS monorepo problems teams ke
 |---|---|
 | [`monorepo-doctor`](https://monorepo-skills.dev/skills/monorepo-doctor/) | Read-only JS/TS audit plus limited static Bazel visibility and `testonly` checks, including standalone Java workspaces. Writes Markdown and JSON reports. |
 | [`monorepo-boundaries-cleanup`](https://monorepo-skills.dev/skills/monorepo-boundaries-cleanup/) | Refactoring workflow: pays boundary violations down in small PRs against a baseline, then stops for your CI report. |
+| [`polyrepo-tax`](https://monorepo-skills.dev/skills/polyrepo-tax/) | Read-only business case: mines the git history of the repos you work across for bugs attributable to repo boundaries, developer and CI time spent moving code between repos, converts it to money, and plans a monorepo migration only for the repos that would pay it back. |
 
 ## monorepo-doctor
 
@@ -16,6 +17,26 @@ Agent skills that find — and then fix — the JS/TS monorepo problems teams ke
 Requires Node ≥ 22.5.
 
 The companion skill [`monorepo-boundaries-cleanup`](skills/monorepo-boundaries-cleanup/SKILL.md) is a refactoring workflow that pays down boundary violations found by monorepo-doctor or by a boundary linter such as `turbo boundaries`, Nx `enforce-module-boundaries`, or dependency-cruiser. It works in small PRs against a baseline: wrong-direction imports, deep imports, undeclared dependencies, cross-workspace test fixtures, and cycles. Unlike monorepo-doctor, it **edits code and opens PRs**, then stops and waits for your CI report.
+
+## polyrepo-tax
+
+`polyrepo-tax` answers "what is our polyrepo setup costing us, and is a monorepo worth it?" from the repositories' own history. Give it the repos you use and contribute to; it clones them read-only and reports:
+
+- **Bugs attributable to repo boundaries**, with commit evidence and a confidence level: internal-dependency rollbacks and reverts (high), the same fix landing in several repos, one bug fixed across repos under one ticket, fixes that needed a release and a bump to propagate, and fixes right after an internal bump (medium).
+- **Developer time** spent on internal dependency bumps, releases that exist only to move code between repos, changes coordinated across repos, and the same tooling or dependency maintenance repeated per repo.
+- **CI time** per repo, measured from GitHub Actions when `gh` is authenticated, otherwise assumed and labelled as such.
+- **Money**: a low / expected / high range at your loaded hourly rate and CI price, annualized, with every assumption printed and overridable.
+- **Migration plan**: repo coupling clusters (migrate the heaviest first, keep isolated repos separate), external dependency conflicts to align before sharing a lockfile, recommended tooling, one-time effort and payback. When the payback isn't there, it says not to migrate.
+
+```text
+Use polyrepo-tax on acme/web-app, acme/admin-app, acme/ui-lib and acme/api-client for the last 12 months. Our loaded cost is $120/hour.
+```
+
+The analyzer (`skills/polyrepo-tax/scripts/analyze.mjs`) is a dependency-free Node script that runs only read-only `git` commands, and also works standalone:
+
+```bash
+node skills/polyrepo-tax/scripts/analyze.mjs ../ui-lib ../web-app ../admin-app --since 2025-11-25 --rate 120 --out ./reports
+```
 
 ## What it checks
 
