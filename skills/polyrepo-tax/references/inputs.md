@@ -56,6 +56,6 @@ Only when `gh auth status` succeeds and repos have a `github` slug:
 node "$S/scripts/fetch-ci.mjs" --config "$W/polyrepo-tax.config.json" --out "$W/ci.json"
 ```
 
-It sums the wall-clock time of every completed GitHub Actions run in the window (one query per month, because the API caps a filtered query at 1000 runs), samples job timings for up to 30 runs per repo (`--sample`) and scales the total by the measured job/wall ratio. It makes only GET requests. A repo that fails keeps the assumed per-commit CI minutes; mention it.
+It sums the wall-clock time of every completed GitHub Actions run in the window. The API caps a filtered query at 1000 runs, so it queries one month at a time and splits any range at the cap until each part is complete; if a single day still hits the cap, that repo fails and keeps the assumed CI minutes. It also samples job timings for up to 30 runs per repo (`--sample`) and scales the total by the measured job/wall ratio, which can be below 1 when queueing inflates wall-clock time. It makes only GET requests. A repo that fails keeps the assumed per-commit CI minutes; mention it.
 
 Other CI systems: if the user can export total CI minutes per repo for the window, write `ci.json` by hand as `{ "<repo name>": { "totalMinutes": 12345 } }`.

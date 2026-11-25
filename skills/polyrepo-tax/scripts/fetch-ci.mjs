@@ -13,7 +13,11 @@ import { fileURLToPath } from 'node:url';
 const gh = (args) => execFileSync('gh', ['api', '-X', 'GET', ...args], { encoding: 'utf8', maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'pipe'] });
 const minutes = (a, b) => Math.max(0, (Date.parse(b) - Date.parse(a)) / 60000);
 
-// The runs API returns at most 1000 results per filtered query, so query one month at a time.
+const LIMIT = 1000;
+const DAY = 86_400_000;
+const isoDay = (d) => d.toISOString().slice(0, 10);
+
+// The runs API returns at most 1000 results per filtered query, so start with one month at a time.
 export function monthRanges(since, until) {
   const out = [];
   let start = new Date(`${since}T00:00:00Z`);
@@ -27,10 +31,24 @@ export function monthRanges(since, until) {
   return out;
 }
 
-export function fetchRepo(slug, since, until, sample) {
+// Splits a range (YYYY-MM-DD..YYYY-MM-DD, inclusive) until each piece is under the API's result cap.
+// Throws when a single day still reaches the cap, so a partial total is never reported as measured.
+export function completeRanges(range, count) {
+  const total = count(range);
+  if (total < LIMIT) return total ? [range] : [];
+  const [from, to] = range.split('..').map((d) => new Date(`${d}T00:00:00Z`));
+  const spanDays = Math.round((to - from) / DAY);
+  if (spanDays < 1) throw new Error(`more than ${LIMIT - 1} runs on ${isoDay(from)}; cannot list them completely`);
+  const mid = new Date(from.getTime() + Math.floor(spanDays / 2) * DAY);
+  return [...completeRanges(`${isoDay(from)}..${isoDay(mid)}`, count), ...completeRanges(`${isoDay(new Date(mid.getTime() + DAY))}..${isoDay(to)}`, count)];
+}
+
+export function fetchRepo(slug, since, until, sample, api = gh) {
   const runs = [];
-  for (const range of monthRanges(since, until)) {
-    const out = gh([`repos/${slug}/actions/runs`, '-f', `created=${range}`, '-f', 'per_page=100', '-f', 'status=completed', '--paginate',
+  const base = [`repos/${slug}/actions/runs`, '-f', 'status=completed'];
+  const count = (range) => Number(api([...base, '-f', `created=${range}`, '-f', 'per_page=1', '--jq', '.total_count']).trim());
+  for (const range of monthRanges(since, until).flatMap((r) => completeRanges(r, count))) {
+    const out = api([...base, '-f', `created=${range}`, '-f', 'per_page=100', '--paginate',
       '--jq', '.workflow_runs[] | [.id, .run_started_at, .updated_at, .event, .name] | @tsv']);
     for (const line of out.split('\n').filter(Boolean)) {
       const [id, started, updated, event, name] = line.split('\t');
@@ -44,12 +62,13 @@ export function fetchRepo(slug, since, until, sample) {
     let w = 0, j = 0;
     for (let i = 0; i < runs.length && sampled < sample; i += step) {
       try {
-        const jobs = gh([`repos/${slug}/actions/runs/${runs[i].id}/jobs`, '-f', 'per_page=100', '--jq', '.jobs[] | [.started_at, .completed_at] | @tsv']);
+        const jobs = api([`repos/${slug}/actions/runs/${runs[i].id}/jobs`, '-f', 'per_page=100', '--paginate', '--jq', '.jobs[] | [.started_at, .completed_at] | @tsv']);
         const jm = jobs.split('\n').filter(Boolean).reduce((s, l) => { const [a, b] = l.split('\t'); return b && b !== 'null' ? s + Math.max(1, Math.ceil(minutes(a, b))) : s; }, 0);
         if (runs[i].wall > 0) { w += runs[i].wall; j += jm; sampled++; }
       } catch { /* skip runs whose jobs were deleted */ }
     }
-    if (w > 0) ratio = Math.max(1, j / w);
+    // Keep the measured ratio either way: below 1 when queue time inflates wall clock, above 1 for parallel jobs.
+    if (w > 0) ratio = j / w;
   }
   const byWorkflow = {};
   for (const r of runs) byWorkflow[r.name] = Math.round((byWorkflow[r.name] ?? 0) + r.wall * ratio);

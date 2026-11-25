@@ -50,4 +50,4 @@ node skills/polyrepo-tax/scripts/analyze.mjs ../ui-lib ../web-app ../admin-app \
   --since 2025-11-25 --rate 120 --ci-rate 0.008 --scope @acme/ --out ./reports
 ```
 
-Add `--ci ci.json` with output from `scripts/fetch-ci.mjs`, `--public <pkg>` for packages also consumed outside these repos, and `--overrides overrides.json` (`{"excludeCommits": ["<sha>"]}`) to drop false positives after review.
+Add `--ci ci.json` with output from `skills/polyrepo-tax/scripts/fetch-ci.mjs`, `--public <pkg>` for packages also consumed outside these repos, and `--overrides overrides.json` (`{"excludeCommits": ["<sha>"]}`) to drop false positives after review.

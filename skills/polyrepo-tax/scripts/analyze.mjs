@@ -53,7 +53,15 @@ const LANG = [
 const DAY = 86_400_000;
 
 const git = (repo, args) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'pipe'] });
+// For lookups that may legitimately miss (a file at a revision, a repo probe). History collection uses
+// collect(), which records failures as data problems instead of returning empty history.
 const tryGit = (repo, args) => { try { return git(repo, args); } catch { return ''; } };
+function collect(repo, args, problems, label) {
+  try { return git(repo, args); } catch (err) {
+    problems.push(`${label}: git ${args[0]} failed (${String(err.stderr || err.message).trim().split('\n')[0]}); this repo's results are incomplete`);
+    return '';
+  }
+}
 const tryJson = (s) => { try { return JSON.parse(s); } catch { return null; } };
 const round = (n, d = 1) => Math.round(n * 10 ** d) / 10 ** d;
 const days = (a, b) => (Date.parse(b) - Date.parse(a)) / DAY;
@@ -72,10 +80,10 @@ export function cmpVersion(a, b) {
 const vstr = (v) => (v ? v.join('.') : '?');
 
 export function normalizeSubject(s) {
-  return s.toLowerCase()
-    .replace(/^revert\s+"?/, '')
+  return s.replace(TICKET, ' ').toLowerCase()
+    .replace(/^\s*revert\s+"?/, '')
     .replace(/^[a-z]+(\([^)]*\))?!?:\s*/, '')
-    .replace(TICKET, ' ').replace(/\(?#\d+\)?/g, ' ').replace(/\b[0-9a-f]{7,40}\b/g, ' ')
+    .replace(/\(?#\d+\)?/g, ' ').replace(/\b[0-9a-f]{7,40}\b/g, ' ')
     .replace(/[^a-z0-9@/.\s-]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 export function similarity(a, b) {
@@ -133,8 +141,8 @@ function inventory(repo) {
   return { files: files.length, packages, languages, packageManager, buildTools, ci, nodeVersion };
 }
 
-function commits(repo, since) {
-  const out = tryGit(repo, ['log', `--since=${since}`, '--no-merges', '--format=%x1e%H%x1f%aI%x1f%an%x1f%ae%x1f%s%x1f%b%x1f', '--name-only']);
+function commits(repo, since, until, problems, label) {
+  const out = collect(repo, ['log', `--since=${since}`, `--until=${until}`, '--no-merges', '--format=%x1e%H%x1f%aI%x1f%an%x1f%ae%x1f%s%x1f%b%x1f', '--name-only'], problems, label);
   const list = [];
   for (const rec of out.split('\x1e')) {
     if (!rec.trim()) continue;
@@ -145,8 +153,8 @@ function commits(repo, since) {
 }
 
 // Parse package.json diffs (zero context) into per-commit dependency and version changes.
-function manifestChanges(repo, since) {
-  const out = tryGit(repo, ['log', `--since=${since}`, '--no-merges', '--format=%x1e%H', '-p', '-U0', '--no-color', '--no-ext-diff', '--', ':(glob)**/package.json']);
+function manifestChanges(repo, since, until, problems, label) {
+  const out = collect(repo, ['log', `--since=${since}`, `--until=${until}`, '--no-merges', '--format=%x1e%H', '-p', '-U0', '--no-color', '--no-ext-diff', '--', ':(glob)**/package.json'], problems, label);
   const bySha = new Map();
   for (const rec of out.split('\x1e')) {
     if (!rec.trim()) continue;
@@ -168,8 +176,8 @@ function manifestChanges(repo, since) {
   return bySha;
 }
 
-function tags(repo) {
-  return tryGit(repo, ['for-each-ref', 'refs/tags', '--format=%(refname:short)%09%(creatordate:iso-strict)'])
+function tags(repo, problems, label) {
+  return collect(repo, ['for-each-ref', 'refs/tags', '--format=%(refname:short)%09%(creatordate:iso-strict)'], problems, label)
     .split('\n').filter(Boolean).map((l) => { const [name, date] = l.split('\t'); return { name, date }; });
 }
 
@@ -191,10 +199,12 @@ export function analyze(config) {
     const name = p.name ?? path.basename(abs).replace(/\.git$/, '');
     if (!tryGit(abs, ['rev-parse', '--git-dir'])) { problems.push(`${name}: not a git repository (${abs})`); return null; }
     if (tryGit(abs, ['rev-parse', '--is-shallow-repository']).trim() === 'true') problems.push(`${name}: shallow clone; history before the shallow boundary is missing`);
+    if (!tryGit(abs, ['rev-parse', '--verify', '--quiet', 'HEAD'])) { problems.push(`${name}: HEAD has no commits (${abs})`); return null; }
+    // HEAD inventory is intentionally current state; history is bounded to [since, now].
     const inv = inventory(abs);
-    const list = commits(abs, since).filter((c) => !exclude.has(c.sha));
+    const list = commits(abs, since, now, problems, name).filter((c) => !exclude.has(c.sha));
     for (const c of list) c.repo = name;
-    return { name, path: abs, github: p.github ?? null, inv, commits: list, manifests: manifestChanges(abs, since), tags: tags(abs) };
+    return { name, path: abs, github: p.github ?? null, inv, commits: list, manifests: manifestChanges(abs, since, now, problems, name), tags: tags(abs, problems, name) };
   }).filter(Boolean);
 
   // Internal packages: published by an analysed repo, or matching a configured scope.
@@ -249,7 +259,7 @@ export function analyze(config) {
       if (!m) continue;
       const publics = r.inv.packages.filter((p) => p.name && !p.private);
       const pkg = m[1] ?? (publics.length === 1 ? publics[0].name : null);
-      if (pkg && t.date >= since) addRelease(pkg, m[2], t.date, r.name, null);
+      if (pkg && t.date >= since && t.date <= now) addRelease(pkg, m[2], t.date, r.name, null);
     }
   }
   // Collapse bumps: one per (repo, sha, pkg) — a commit touching several manifests counts once.
@@ -374,11 +384,15 @@ export function analyze(config) {
     const via = list.some((c) => linkedBy.get(key(c)) === 'ticket') ? 'ticket' : 'similar';
     const ticket = list.find((c) => c.ticket)?.ticket ?? null;
     const commitsEv = list.map(ev);
-    const isFix = list.some((c) => isFixSubject(c.subject));
+    // A group is a bug only when fix commits land in at least two repos; one fix plus related work is coordination.
+    const fixes = list.filter((c) => isFixSubject(c.subject));
+    const isFix = new Set(fixes.map((c) => c.repo)).size >= 2;
     const configOnly = list.every((c) => (c.files.length && c.files.every((f) => CONFIG_FILE.test(f))) || DEPS_CHORE.test(c.subject));
     const title = ticket && !list[0].subject.includes(ticket) ? `${ticket}: ${list[0].subject}` : list[0].subject;
     if (isFix) {
-      const dup = via === 'similar' || list.filter((c) => isFixSubject(c.subject)).every((c, _, arr) => similarity(normalizeSubject(c.subject), normalizeSubject(arr[0].subject)) >= a.similarity);
+      const first = normalizeSubject(fixes[0].subject);
+      const similarRepos = new Set(fixes.filter((c) => similarity(normalizeSubject(c.subject), first) >= a.similarity).map((c) => c.repo));
+      const dup = similarRepos.size >= 2;
       bugs.push(dup
         ? { category: 'duplicated-fix', confidence: 'medium', repos: groupRepos, title, why: `The same fix was applied in ${groupRepos.length} repos: duplicated code, or a shared contract that has to be fixed everywhere.`, commits: commitsEv, copies: groupRepos.length }
         : { category: 'cross-repo-fix', confidence: 'medium', repos: groupRepos, title, why: `One bug needed coordinated fixes in ${groupRepos.length} repos (linked by ${ticket ?? 'subject'}); the contract between them lives in no single repo.`, commits: commitsEv });
@@ -424,33 +438,46 @@ export function analyze(config) {
   for (const r of repos) {
     const ci = config.ci?.[r.name];
     const landed = r.commits.length || 1;
-    perRepoCi[r.name] = ci && ci.totalMinutes > 0
+    perRepoCi[r.name] = ci && Number.isFinite(ci.totalMinutes) && ci.totalMinutes >= 0
       ? { minutesPerCommit: ci.totalMinutes / Math.max(ci.commits ?? landed, 1), source: 'measured', runs: ci.runs ?? null, totalMinutes: ci.totalMinutes }
       : { minutesPerCommit: a.ciMinutesPerCommit, source: 'assumed' };
   }
   const ciMin = (repo, n = 1) => n * (perRepoCi[repo]?.minutesPerCommit ?? a.ciMinutesPerCommit);
   const conf = { low: ['high'], expected: ['high', 'medium'], high: ['high', 'medium', 'low'] };
-  const lines = (scenario) => {
+  // scope: null = every analysed repo (the tax); a Set = only repos that would move (what a migration recovers).
+  const inScope = (scope, repo) => !scope || scope.has(repo);
+  const scopeGroup = (scope, g) => {
+    const commits = g.commits.filter((c) => inScope(scope, c.repo));
+    const repos = [...new Set(commits.map((c) => c.repo))];
+    return repos.length >= 2 ? { ...g, commits, repos, copies: repos.length } : null;
+  };
+  const lines = (scenario, scope = null) => {
     const out = [];
+    const coordinatedS = coordinated.map((g) => scopeGroup(scope, g)).filter(Boolean);
+    const toolingS = duplicatedTooling.map((g) => scopeGroup(scope, g)).filter(Boolean);
     // A bump that is itself counted as a fix-propagation bug is costed once, as the bug.
     const ownBug = new Set(bugs.filter((b) => b.category === 'fix-propagation').flatMap((b) => b.commits.map((c) => `${c.repo}:${c.sha}`)));
-    const costedBumps = uniqueBumps.filter((b) => b.direction === 'up' && !ownBug.has(`${b.repo}:${b.sha.slice(0, 10)}`));
+    const costedBumps = uniqueBumps.filter((b) => b.direction === 'up' && !ownBug.has(`${b.repo}:${b.sha.slice(0, 10)}`)
+      && inScope(scope, b.repo) && (!scope || scope.has(producerOf.get(b.pkg))));
     const humanBumps = costedBumps.filter((b) => !b.bot);
     const botBumps = costedBumps.filter((b) => b.bot);
     const bumpCommitSet = (list) => [...new Set(list.map((b) => `${b.repo}:${b.sha}`))].map((k) => k.split(':')[0]);
     out.push({ key: 'bumps', label: 'Internal dependency bumps', count: humanBumps.length + botBumps.length,
       hours: humanBumps.length * a.bumpHumanHours + botBumps.length * a.bumpBotHours,
       ciMinutes: bumpCommitSet(costedBumps).reduce((s, repo) => s + ciMin(repo), 0) });
-    out.push({ key: 'releases', label: 'Internal releases consumed by sibling repos', count: releaseEvents.length,
-      hours: releaseEvents.length * a.releaseHours, ciMinutes: releaseEvents.reduce((s, x) => s + ciMin(x.repo), 0) });
-    out.push({ key: 'coordination', label: 'Changes coordinated across repos', count: coordinated.length,
-      hours: coordinated.reduce((s, g) => s + (g.repos.length - 1) * a.coordinationHoursPerExtraRepo, 0),
-      ciMinutes: coordinated.reduce((s, g) => s + g.commits.filter((c) => c.repo !== g.commits[0].repo).reduce((t, c) => t + ciMin(c.repo), 0), 0) });
-    out.push({ key: 'duplicatedTooling', label: 'Same tooling/dependency maintenance repeated per repo', count: duplicatedTooling.length,
-      hours: duplicatedTooling.reduce((s, g) => s + (g.copies - 1) * (g.bot ? a.bumpBotHours : a.duplicateChangeHoursPerCopy), 0),
-      ciMinutes: duplicatedTooling.reduce((s, g) => s + g.commits.filter((c) => c.repo !== g.commits[0].repo).reduce((t, c) => t + ciMin(c.repo), 0), 0) });
+    const rel = releaseEvents.filter((x) => inScope(scope, x.repo));
+    // One CI run per release commit, even when it versions several packages.
+    const relCommits = [...new Map(rel.map((x) => [`${x.repo}:${x.sha}`, x.repo])).values()];
+    out.push({ key: 'releases', label: 'Internal releases consumed by sibling repos', count: rel.length,
+      hours: rel.length * a.releaseHours, ciMinutes: relCommits.reduce((s, repo) => s + ciMin(repo), 0) });
+    out.push({ key: 'coordination', label: 'Changes coordinated across repos', count: coordinatedS.length,
+      hours: coordinatedS.reduce((s, g) => s + (g.repos.length - 1) * a.coordinationHoursPerExtraRepo, 0),
+      ciMinutes: coordinatedS.reduce((s, g) => s + g.commits.filter((c) => c.repo !== g.commits[0].repo).reduce((t, c) => t + ciMin(c.repo), 0), 0) });
+    out.push({ key: 'duplicatedTooling', label: 'Same tooling/dependency maintenance repeated per repo', count: toolingS.length,
+      hours: toolingS.reduce((s, g) => s + (g.copies - 1) * (g.bot ? a.bumpBotHours : a.duplicateChangeHoursPerCopy), 0),
+      ciMinutes: toolingS.reduce((s, g) => s + g.commits.filter((c) => c.repo !== g.commits[0].repo).reduce((t, c) => t + ciMin(c.repo), 0), 0) });
     for (const cat of ['dependency-regression', 'post-bump-fix', 'fix-propagation', 'duplicated-fix', 'cross-repo-fix']) {
-      const list = bugs.filter((b) => b.category === cat && conf[scenario].includes(b.confidence));
+      const list = bugs.filter((b) => b.category === cat && conf[scenario].includes(b.confidence) && (!scope || b.repos.every((x) => scope.has(x))));
       out.push({ key: cat, label: `Bugs: ${cat}`, count: list.length,
         hours: list.reduce((s, b) => s + a.bugHours + (b.copies ? (b.copies - 1) * a.duplicateChangeHoursPerCopy : 0), 0),
         ciMinutes: list.reduce((s, b) => s + b.commits.filter((c) => !c.evidenceOnly).reduce((t, c) => t + ciMin(c.repo), 0), 0) });
@@ -469,7 +496,6 @@ export function analyze(config) {
         devCost: Math.round(sum('hours') * rates.developerHourly), ciCost: Math.round(sum('ciMinutes') * rates.ciPerMinute) },
     };
   };
-  const scenarios = { low: lines('low'), expected: lines('expected'), high: lines('high') };
 
   // ---------- migration facts ----------
   const edges = new Map();
@@ -493,9 +519,20 @@ export function analyze(config) {
   })).sort((x, y) => y.weight - x.weight || y.repos.length - x.repos.length);
   const isolated = clusters.filter((c) => c.repos.length === 1).map((c) => c.repos[0]);
 
-  // External dependency conflicts (different majors across repos) — alignment work before a single lockfile.
+  const migrateRepos = repos.filter((r) => !isolated.includes(r.name) || repos.length === 1);
+  const migrateSet = new Set(migrateRepos.map((r) => r.name));
+  // Cost covers every analysed repo; savings and payback only the repos that would move.
+  const scenarios = {};
+  for (const k of ['low', 'expected', 'high']) {
+    const full = lines(k), scoped = lines(k, migrateSet);
+    full.lines.forEach((l, i) => { l.annualSavings = scoped.lines[i].annualSavings; });
+    full.totals.annualSavings = scoped.totals.annualSavings;
+    scenarios[k] = full;
+  }
+
+  // External dependency conflicts (different majors across the repos that would move) — alignment before one lockfile.
   const ext = new Map();
-  for (const r of repos) for (const p of r.inv.packages) for (const [dep, range] of Object.entries(p.deps)) {
+  for (const r of migrateRepos) for (const p of r.inv.packages) for (const [dep, range] of Object.entries(p.deps)) {
     if (isInternal(dep)) continue;
     const v = minVersion(range);
     if (!v) continue;
@@ -517,7 +554,6 @@ export function analyze(config) {
       : langNames.every((l) => l === 'java/kotlin') ? 'Gradle composite build, or Bazel for very large graphs'
         : tools.has('bazel') ? 'Bazel (already used)' : 'Nx (polyglot plugins) or Bazel';
 
-  const migrateRepos = repos.filter((r) => !isolated.includes(r.name) || repos.length === 1);
   const migrationDays = migrateRepos.length * a.migrationDaysPerRepo + conflicts.length * a.migrationDaysPerConflict;
   const migrationCost = Math.round(migrationDays * 8 * rates.developerHourly);
   const payback = (s) => {

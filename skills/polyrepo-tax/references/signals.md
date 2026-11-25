@@ -1,6 +1,6 @@
 # Signals
 
-The analyzer reads commits on each repo's default branch (`git log --no-merges`) within the window, `package.json` diffs, tags, and the files at `HEAD`. Package ecosystems other than npm contribute to grouping signals (tickets, repeated fixes, tooling churn) but not to dependency bumps.
+The analyzer reads the history reachable from each repo's `HEAD` (`git log --no-merges`) between the window start and `now`, `package.json` diffs, tags, and the files at `HEAD`. In the bare clones from inputs.md, `HEAD` is the default branch. For a local working copy, check out the default branch first; a feature branch adds unmerged commits and misses ones it does not contain. Package ecosystems other than npm contribute to grouping signals (tickets, repeated fixes, tooling churn) but not to dependency bumps.
 
 ## Internal packages
 

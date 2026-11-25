@@ -50,6 +50,11 @@ Share of each driver a monorepo with workspace dependencies (`workspace:*`), aff
 | Dependency regressions, post-bump fixes | 90% | The producer PR runs consumer tests; some breaks still slip past tests. |
 | Cross-repo fixes | 50% | Atomic fix, but the bug can still happen. |
 
-Payback months = one-time migration cost ÷ (annual savings ÷ 12 − `monorepoToolingMonthly`). One-time cost = (`migrationDaysPerRepo` × repos in coupled clusters + `migrationDaysPerConflict` × external conflicts) × 8 × `developerHourly`. Isolated repos are excluded from migration cost and from the recommendation.
+Payback months = one-time migration cost ÷ (annual savings ÷ 12 − `monorepoToolingMonthly`). Both sides cover only the repos that would move (coupled clusters):
+
+- Savings count an event only when its repos are all in scope: bumps and releases in migrated repos of packages produced by migrated repos, bugs whose repos all move, and the in-scope part of a cross-repo group with at least two in-scope repos. Cost per driver still covers every analysed repo.
+- One-time cost = (`migrationDaysPerRepo` × migrated repos + `migrationDaysPerConflict` × external conflicts among migrated repos) × 8 × `developerHourly`.
+
+Isolated repos are excluded from migration cost, savings and the recommendation.
 
 The model does not count costs that are real but hard to measure from git: onboarding to N toolchains, context switching, slower discovery of shared code, and security patches applied N times (unless they show up as repeated changes). Mention them qualitatively, never as numbers.

@@ -14,7 +14,9 @@ function moneyFormatter(currency) {
     const compact = new Intl.NumberFormat('en-US', { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1 });
     return { full: (n) => full.format(n), compact: (n) => (Math.abs(n) < 10_000 ? full.format(n) : compact.format(n)) };
   } catch {
-    const f = (n) => `${currency} ${Math.round(n).toLocaleString('en-US')}`;
+    // Not an ISO 4217 code: keep only characters that are safe in HTML text and attributes.
+    const label = String(currency).replace(/[^A-Za-z0-9 ._-]/g, '').slice(0, 12) || 'USD';
+    const f = (n) => `${label} ${Math.round(n).toLocaleString('en-US')}`;
     return { full: f, compact: f };
   }
 }
@@ -74,9 +76,13 @@ export function renderHtml(r, { plan } = {}) {
   const repoList = r.repos.map((x) => x.name).join(', ');
   const ciMeasured = r.repos.filter((x) => x.ci?.source === 'measured').length;
   const paybackText = pb.expected === null ? 'Not reached' : pb.expected > 120 ? '10+ years' : `${pb.expected} months`;
-  const verdict = pb.expected === null || pb.expected > 24 || !r.migration.clusters.some((c) => c.repos.length > 1 && c.weight >= 5)
+  // Payback decides the message; weak coupling only qualifies a short payback, never contradicts it.
+  const strongCluster = r.migration.clusters.some((c) => c.repos.length > 1 && c.weight >= 5);
+  const verdict = pb.expected === null || pb.expected > 24
     ? { cls: 'verdict-no', text: 'The measured tax does not pay back a migration within two years. Fix the top cost drivers in place instead, or migrate only the most coupled cluster.' }
-    : { cls: 'verdict-yes', text: `Migrating the coupled repos pays back in about ${pb.expected} months at the expected estimate.` };
+    : strongCluster
+      ? { cls: 'verdict-yes', text: `Migrating the coupled repos pays back in about ${pb.expected} months at the expected estimate.` }
+      : { cls: 'verdict-no', text: `Payback is about ${pb.expected} months, but no cluster has a coupling weight of 5 or more. Treat it as a small, uncertain gain: fixing the top cost drivers in place may be cheaper.` };
 
   // Annualized cost by driver: one series, ranked, zero rows left to the table.
   const drivers = e.lines.filter((l) => l.annualCost > 0).sort((a, b) => b.annualCost - a.annualCost);

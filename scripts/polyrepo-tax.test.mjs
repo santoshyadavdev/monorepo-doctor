@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { analyze, renderMarkdown, isFixSubject, normalizeSubject, similarity, ticketsOf, minVersion } from '../skills/polyrepo-tax/scripts/analyze.mjs';
 import { renderHtml, markdownToHtml } from '../skills/polyrepo-tax/scripts/render-html.mjs';
-import { monthRanges } from '../skills/polyrepo-tax/scripts/fetch-ci.mjs';
+import { monthRanges, completeRanges, fetchRepo } from '../skills/polyrepo-tax/scripts/fetch-ci.mjs';
 import { makeFixture } from '../fixtures/polyrepo/make-fixture.mjs';
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'polyrepo-tax-'));
@@ -144,4 +144,133 @@ test('markdownToHtml escapes HTML and renders tables and code', () => {
   assert.ok(out.includes('&lt;b&gt;x&lt;/b&gt;'));
   assert.ok(out.includes('<td>1</td><td>2</td>'));
   assert.ok(out.includes('<pre><code>&lt;tag&gt;</code></pre>'));
+});
+
+// ---------- regression tests for review findings ----------
+
+function miniRepo(dir, commits) {
+  fs.mkdirSync(dir, { recursive: true });
+  const g = (args, env = {}) => execFileSync('git', ['-C', dir, ...args], { env: { ...process.env, ...env }, stdio: 'pipe' });
+  g(['init', '-q', '-b', 'main']);
+  for (const [date, subject, files] of commits) {
+    for (const [f, c] of Object.entries(files)) {
+      fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
+      fs.writeFileSync(path.join(dir, f), typeof c === 'string' ? c : JSON.stringify(c, null, 2) + '\n');
+    }
+    g(['add', '-A']);
+    const d = `${date}T12:00:00Z`;
+    g(['-c', 'commit.gpgsign=false', 'commit', '-q', '-m', subject], { GIT_AUTHOR_NAME: 'A', GIT_AUTHOR_EMAIL: 'a@example.com', GIT_COMMITTER_NAME: 'A', GIT_COMMITTER_EMAIL: 'a@example.com', GIT_AUTHOR_DATE: d, GIT_COMMITTER_DATE: d });
+  }
+  return dir;
+}
+const ci = (n) => `on: [push]\njobs: { t: { runs-on: ubuntu-latest, steps: [{ uses: actions/setup-node@v4, with: { node-version: ${n} } }] } }\n`;
+const mini = (() => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'polyrepo-tax-mini-'));
+  const pkg = (n, v) => ({ name: n, version: v });
+  const P = miniRepo(path.join(base, 'producer'), [
+    ['2026-01-02', 'initial commit', { 'packages/a/package.json': pkg('@x/a', '1.0.0'), 'packages/b/package.json': pkg('@x/b', '1.0.0'), '.github/workflows/ci.yml': ci(22) }],
+    ['2026-02-01', 'chore(release): publish', { 'packages/a/package.json': pkg('@x/a', '1.1.0'), 'packages/b/package.json': pkg('@x/b', '1.1.0') }],
+    ['2026-03-01', 'TIX-1 add field to the orders API', { 'src/api.ts': 'export const f = 1;\n' }],
+    ['2026-04-01', 'ci: bump node to 24', { '.github/workflows/ci.yml': ci(24) }],
+  ]);
+  const C = miniRepo(path.join(base, 'consumer'), [
+    ['2026-01-03', 'initial commit', { 'package.json': { name: 'consumer', private: true, dependencies: { '@x/a': '^1.0.0', '@x/b': '^1.0.0' } }, '.github/workflows/ci.yml': ci(22) }],
+    ['2026-03-02', 'fix: TIX-1 handle new field in checkout', { 'src/checkout.ts': 'export const c = 1;\n' }],
+    ['2026-04-02', 'ci: bump node to 24', { '.github/workflows/ci.yml': ci(24) }],
+  ]);
+  const I = miniRepo(path.join(base, 'isolated'), [
+    ['2026-01-04', 'initial commit', { 'package.json': { name: 'isolated', private: true }, '.github/workflows/ci.yml': ci(22) }],
+    ['2026-04-03', 'ci: bump node to 24', { '.github/workflows/ci.yml': ci(24) }],
+    ['2027-06-01', 'feat: work after the report window', { 'src/late.ts': 'export {};\n' }],
+  ]);
+  test.after(() => fs.rmSync(base, { recursive: true, force: true }));
+  return { base, repos: [P, C, I], config: { repos: [P, C, I], since: '2026-01-01', now: '2027-01-01T00:00:00Z' } };
+})();
+
+test('ticket keys are removed before lowercasing, so subjects differing only by ticket match', () => {
+  assert.equal(normalizeSubject('PAY-42 add currency field'), normalizeSubject('PAY-43 add currency field'));
+  assert.equal(normalizeSubject('fix(ui): PAY-42 add currency field'), 'add currency field');
+});
+
+test('history after `now` is excluded from commits and tags', () => {
+  const r = analyze(mini.config);
+  assert.equal(r.repos.find((x) => x.name === 'isolated').commits, 2);
+  const early = analyze({ ...config, now: '2026-04-01T00:00:00Z' });
+  assert.equal(early.bugs.filter((b) => b.category === 'duplicated-fix').length, 0, 'April fixes are after now');
+  assert.equal(early.internal.releases.length, 2, 'the June release is after now');
+});
+
+test('one fix plus related work in another repo is coordination, not a cross-repo bug', () => {
+  const r = analyze(mini.config);
+  assert.equal(r.bugs.length, 0);
+  assert.equal(r.coordinated.length, 1);
+  assert.equal(r.coordinated[0].ticket, 'TIX-1');
+});
+
+test('a release commit versioning several packages costs one CI run', () => {
+  const rel = analyze(mini.config).cost.expected.lines.find((l) => l.key === 'releases');
+  assert.equal(rel.count, 2);
+  assert.equal(rel.hours, 1);
+  assert.equal(rel.ciMinutes, 15);
+});
+
+test('zero measured CI minutes is a measurement, not missing data', () => {
+  const r = analyze({ ...config, ci: { 'web-app': { totalMinutes: 0 }, 'ui-lib': { totalMinutes: 'n/a' } } });
+  assert.deepEqual([r.repos.find((x) => x.name === 'web-app').ci.source, r.repos.find((x) => x.name === 'web-app').ci.minutesPerCommit], ['measured', 0]);
+  assert.equal(r.repos.find((x) => x.name === 'ui-lib').ci.source, 'assumed');
+});
+
+test('savings and migration cost cover only the repos that would move', () => {
+  const r = analyze(mini.config);
+  assert.deepEqual(r.migration.isolated, ['isolated']);
+  const tooling = r.cost.expected.lines.find((l) => l.key === 'duplicatedTooling');
+  assert.equal(tooling.hours, 2, 'the tax counts all three copies');
+  assert.equal(tooling.annualSavings, Math.round(1 * 100 + 15 * 0.008), 'only the producer/consumer copy is recovered');
+  assert.deepEqual(r.migration.oneTime.repos.sort(), ['consumer', 'producer']);
+});
+
+test('unreadable history is reported as a data problem, not an empty repo', () => {
+  const empty = path.join(mini.base, 'empty');
+  fs.mkdirSync(empty);
+  execFileSync('git', ['-C', empty, 'init', '-q']);
+  const r = analyze({ ...mini.config, repos: [...mini.repos, empty] });
+  assert.ok(r.problems.some((p) => p.startsWith('empty: HEAD has no commits')));
+});
+
+test('fetch-ci splits ranges at the 1000-run cap and refuses partial days', () => {
+  const perDay = { '2026-01-01': 600, '2026-01-02': 600, '2026-01-03': 10 };
+  const count = (range) => {
+    const [a, b] = range.split('..');
+    return Object.entries(perDay).filter(([d]) => d >= a && d <= b).reduce((s, [, n]) => s + n, 0);
+  };
+  const ranges = completeRanges('2026-01-01..2026-01-03', count);
+  assert.ok(ranges.every((r) => count(r) < 1000));
+  assert.equal(ranges.reduce((s, r) => s + count(r), 0), 1210);
+  assert.throws(() => completeRanges('2026-01-01..2026-01-01', () => 1000), /cannot list them completely/);
+});
+
+test('fetch-ci paginates jobs and keeps a job/wall ratio below 1', () => {
+  const calls = [];
+  const api = (args) => {
+    calls.push(args);
+    if (args.includes('.total_count')) return '1\n';
+    if (args[0].endsWith('/jobs')) return '2026-01-01T00:00:00Z\t2026-01-01T00:05:00Z\n';
+    return '42\t2026-01-01T00:00:00Z\t2026-01-01T00:10:00Z\tpush\tci\n';
+  };
+  const r = fetchRepo('acme/app', '2026-01-01', '2026-01-02', 5, api);
+  assert.equal(r.jobWallRatio, 0.5);
+  assert.equal(r.totalMinutes, 5);
+  assert.ok(calls.find((c) => c[0].endsWith('/jobs')).includes('--paginate'));
+});
+
+test('html: invalid currency codes cannot inject markup; verdict agrees with payback', () => {
+  const bad = structuredClone(report);
+  bad.rates.currency = '<img src=x onerror=alert(1)>';
+  assert.ok(!renderHtml(bad).includes('<img'));
+  const short = structuredClone(report);
+  short.migration.paybackMonths.expected = 12;
+  short.migration.clusters = [{ repos: ['a', 'b'], weight: 2 }];
+  const html = renderHtml(short);
+  assert.ok(!html.includes('does not pay back a migration within two years'));
+  assert.ok(html.includes('Payback is about 12 months, but no cluster'));
 });
