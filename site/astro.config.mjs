@@ -35,16 +35,16 @@ export default defineConfig({
         starlightLlmsTxt({
           projectName: 'Monorepo Skills',
           description:
-            'Two agent skills for JS/TS monorepos (npm, yarn, pnpm, bun workspaces; Nx; Turborepo), plus limited static Bazel target checks that also work in standalone Java workspaces. monorepo-doctor is a read-only audit that writes Markdown and JSON reports. monorepo-boundaries-cleanup is a refactoring workflow that removes boundary violations in small PRs against a baseline.',
+            'Three agent skills for JS/TS monorepos (npm, yarn, pnpm, bun workspaces; Nx; Turborepo), plus limited static Bazel target checks that also work in standalone Java workspaces, and a business case for moving several repositories into one. monorepo-doctor is a read-only audit that writes Markdown and JSON reports. monorepo-boundaries-cleanup is a refactoring workflow that removes boundary violations in small PRs against a baseline. polyrepo-tax reads the git history of several repositories, prices the bugs, developer time and CI time their split costs, and plans a monorepo migration with a payback estimate.',
           details:
-            'Raw skill files are served at /skills/<skill>/SKILL.md and /skills/monorepo-doctor/references/<file>.md. Install with `npx skills add santoshyadavdev/monorepo-doctor --skill <skill>`, or copy the skill files manually. The audit requires Node.js, but a standalone Bazel workspace does not require npm. Bazel inspection is partial and covers literal visibility and test-only target relationships, not Java source cycles, Bazel caching or CI coverage. Try the intentionally broken React + Turborepo example at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/react-turbo, Angular + Nx example at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/angular-nx, and Bazel Java example at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/bazel-java. Setup and report verification are documented at https://monorepo-skills.dev/getting-started/.',
-          promote: ['index*', 'getting-started', 'for-agents', 'skills/**'],
+            'Raw skill files are served at /skills/<skill>/SKILL.md and /skills/<skill>/references/<file>.md. Install with `npx skills add santoshyadavdev/monorepo-doctor --skill <skill>`, or copy the skill files manually. The audit requires Node.js, but a standalone Bazel workspace does not require npm. Bazel inspection is partial and covers literal visibility and test-only target relationships, not Java source cycles, Bazel caching or CI coverage. Try the intentionally broken React + Turborepo example at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/react-turbo, Angular + Nx example at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/angular-nx, and Bazel Java example at https://github.com/santoshyadavdev/monorepo-doctor/tree/master/examples/bazel-java. Setup and report verification are documented at https://monorepo-skills.dev/getting-started/. polyrepo-tax is read-only: it bare-clones the repositories a user names, runs only read-only git commands (plus optional `gh api` GET requests for GitHub Actions minutes), and runs its bundled Node scripts from /skills/polyrepo-tax/scripts/ (analyze.mjs, render-html.mjs, fetch-ci.mjs). It writes polyrepo-tax-report.html, .md and .json. Its money figures are estimates from documented, overridable assumptions, reported as a low/expected/high range; bugs are attributed with a confidence level and commit evidence, and the skill recommends against migrating when payback is longer than about two years or coupling is weak. Raw references: /skills/polyrepo-tax/references/<file>.md (inputs, signals, cost-model, migration, report-format). Walkthrough: https://monorepo-skills.dev/guides/polyrepo-to-monorepo/. Sample report: https://monorepo-skills.dev/examples/polyrepo-tax-report.html.',
+          promote: ['index*', 'getting-started', 'for-agents', 'skills/**', 'guides/polyrepo-to-monorepo'],
         }),
       ],
       sidebar: [
         { label: 'Start here', items: ['getting-started', 'for-agents'] },
-        { label: 'Skills', items: ['skills/monorepo-doctor', 'skills/monorepo-boundaries-cleanup'] },
-        { label: 'Guides', items: ['guides/ci', 'guides/caching-and-stale-results', 'guides/doctor-to-cleanup'] },
+        { label: 'Skills', items: ['skills/monorepo-doctor', 'skills/monorepo-boundaries-cleanup', 'skills/polyrepo-tax'] },
+        { label: 'Guides', items: ['guides/ci', 'guides/caching-and-stale-results', 'guides/doctor-to-cleanup', 'guides/polyrepo-to-monorepo'] },
         {
           label: 'Prompts',
           items: [
@@ -59,6 +59,7 @@ export default defineConfig({
           items: [
             { label: 'monorepo-doctor', items: [{ autogenerate: { directory: 'reference/monorepo-doctor' } }] },
             { label: 'monorepo-boundaries-cleanup', items: [{ autogenerate: { directory: 'reference/monorepo-boundaries-cleanup' } }] },
+            { label: 'polyrepo-tax', items: [{ autogenerate: { directory: 'reference/polyrepo-tax' } }] },
           ],
         },
         { label: 'Project', items: ['faq', 'prior-art', 'contributing'] },

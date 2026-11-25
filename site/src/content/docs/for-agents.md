@@ -22,6 +22,7 @@ These are byte-for-byte copies of the files in the repository, regenerated on ev
 |---|---|
 | monorepo-doctor | [`/skills/monorepo-doctor/SKILL.md`](/skills/monorepo-doctor/SKILL.md) |
 | monorepo-boundaries-cleanup | [`/skills/monorepo-boundaries-cleanup/SKILL.md`](/skills/monorepo-boundaries-cleanup/SKILL.md) |
+| polyrepo-tax | [`/skills/polyrepo-tax/SKILL.md`](/skills/polyrepo-tax/SKILL.md) |
 
 monorepo-doctor loads its references on demand from `/skills/monorepo-doctor/references/`:
 [`detection.md`](/skills/monorepo-doctor/references/detection.md),
@@ -34,11 +35,24 @@ monorepo-doctor loads its references on demand from `/skills/monorepo-doctor/ref
 [`prod-leakage.md`](/skills/monorepo-doctor/references/prod-leakage.md),
 [`report-format.md`](/skills/monorepo-doctor/references/report-format.md).
 
+polyrepo-tax loads its references from `/skills/polyrepo-tax/references/`:
+[`inputs.md`](/skills/polyrepo-tax/references/inputs.md),
+[`signals.md`](/skills/polyrepo-tax/references/signals.md),
+[`cost-model.md`](/skills/polyrepo-tax/references/cost-model.md),
+[`migration.md`](/skills/polyrepo-tax/references/migration.md),
+[`report-format.md`](/skills/polyrepo-tax/references/report-format.md).
+It runs dependency-free Node scripts shipped with the skill:
+[`analyze.mjs`](/skills/polyrepo-tax/scripts/analyze.mjs),
+[`render-html.mjs`](/skills/polyrepo-tax/scripts/render-html.mjs) and
+[`fetch-ci.mjs`](/skills/polyrepo-tax/scripts/fetch-ci.mjs).
+A [sample HTML report](/examples/polyrepo-tax-report.html) shows the output.
+
 ## Installing on behalf of a user
 
 ```bash
 npx skills add santoshyadavdev/monorepo-doctor --skill monorepo-doctor
 npx skills add santoshyadavdev/monorepo-doctor --skill monorepo-boundaries-cleanup
+npx skills add santoshyadavdev/monorepo-doctor --skill polyrepo-tax
 ```
 
 ## Example workspaces
@@ -51,6 +65,7 @@ The [Bazel + Java example](https://github.com/santoshyadavdev/monorepo-doctor/tr
 
 - **monorepo-doctor** — the user asks for a monorepo audit or health check, reports Nx/Turborepo cache problems, affected tests not running, circular dependencies, package boundary drift, or test code shipped to production, or asks for the supported static Bazel target checks. Bazel-only coverage is limited and partial. It is read-only: never install, build, run tests or edit files while following it.
 - **monorepo-boundaries-cleanup** — a boundary linter or a monorepo-doctor report shows existing violations that must be paid down. It edits code and opens PRs, one root cause per PR, and stops after each PR until the user reports CI status.
+- **polyrepo-tax** — the user works across several repositories and asks what that split costs (bugs, developer time, CI time, money), whether a monorepo is worth it, or how to plan the migration. It is read-only: clone with history, never push or edit. Present money as a range with its assumptions, and recommend against migrating when the payback isn't there.
 
 ## Ground rules for agents
 

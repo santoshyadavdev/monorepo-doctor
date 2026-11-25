@@ -11,7 +11,7 @@ description: Install the monorepo skills and run your first audit.
 
 ## Install
 
-Install both skills with the [`skills` CLI](https://skills.sh):
+Install all three skills with the [`skills` CLI](https://skills.sh):
 
 ```bash
 npx skills add santoshyadavdev/monorepo-doctor
@@ -22,11 +22,12 @@ Install only one of them:
 ```bash
 npx skills add santoshyadavdev/monorepo-doctor --skill monorepo-doctor
 npx skills add santoshyadavdev/monorepo-doctor --skill monorepo-boundaries-cleanup
+npx skills add santoshyadavdev/monorepo-doctor --skill polyrepo-tax
 ```
 
 ### Manual install
 
-Copy `skills/monorepo-doctor` or `skills/monorepo-boundaries-cleanup` from the [repository](https://github.com/santoshyadavdev/monorepo-doctor) into one of:
+Copy `skills/monorepo-doctor`, `skills/monorepo-boundaries-cleanup` or `skills/polyrepo-tax` (including its `scripts/` folder) from the [repository](https://github.com/santoshyadavdev/monorepo-doctor) into one of:
 
 | Location | Scope |
 |---|---|
