@@ -25,7 +25,7 @@ The report carries two sections built from a dated snapshot of [monorepo.tools](
 
 Write this to `migration-plan.md` in the report directory, filled in, append it to `polyrepo-tax-report.md`, then re-render the HTML report (`render-html.mjs` embeds `migration-plan.md` from the same directory):
 
-1. **Target layout and tooling** — the tool options table, then the pick: `migration.recommendedTool` is the stack-based default. If the team chooses another fitting tool from the table, use that one. Propose `apps/<repo>` for deployables and `packages/<name>` for libraries. If one repo already uses Nx, Turborepo or Bazel, build on it rather than adding a second tool.
+1. **Target layout and tooling** — the tool options table, then the pick: `migration.recommendedTool` is the stack-based default. If the team chooses another fitting tool from the table, use that one. Propose `apps/${repo}` for deployables and `packages/${name}` for libraries. If one repo already uses Nx, Turborepo or Bazel, build on it rather than adding a second tool.
 2. **Phase 0 — prepare (no repo moves).**
    - Align each entry in `migration.externalConflicts`, starting with those in the most repos. Each is a normal PR in the existing repo.
    - Agree on one package manager, Node version and lint/format config (from `repos[].packageManager`, `nodeVersion`).

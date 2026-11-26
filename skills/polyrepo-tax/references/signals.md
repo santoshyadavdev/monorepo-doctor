@@ -18,7 +18,7 @@ Only these categories exist. Each bug carries commit evidence.
 
 | Category | Confidence | Detected when | Why it is a repo-boundary bug |
 |---|---|---|---|
-| `dependency-regression` | high | A commit downgrades an internal dependency, or is `Revert "<subject>"` of a bump commit in the same repo. | An internal release broke a consumer after it shipped. In a monorepo, the producer change runs the consumer's tests before merge. |
+| `dependency-regression` | high | A commit downgrades an internal dependency, or is `Revert "${subject}"` of a bump commit in the same repo. | An internal release broke a consumer after it shipped. In a monorepo, the producer change runs the consumer's tests before merge. |
 | `duplicated-fix` | medium | Fix commits (see below) with near-identical subjects land in ≥2 repos within `groupWindowDays`, or share a ticket and a subject. | The same code or contract was copied into several repos and had to be fixed in each. |
 | `cross-repo-fix` | medium | Fix commits in ≥2 repos share a ticket key (`ABC-123`, `owner/repo#12`) but have different subjects. | One bug needed coordinated changes across repos: the contract between them lives nowhere. |
 | `fix-propagation` | medium | A fix commit that also bumps an internal dependency up. | The fix needed a producer release and a consumer bump to reach users. |
