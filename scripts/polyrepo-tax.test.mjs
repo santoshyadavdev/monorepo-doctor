@@ -363,7 +363,7 @@ function makeRepo(name, files) {
   const g = (...args) => execFileSync('git', ['-C', dir, '-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { stdio: 'ignore' });
   g('init', '-q');
   g('add', '.');
-  g('commit', '-q', '-m', 'init', '--date', '2026-06-01T00:00:00Z');
+  g('commit', '-q', '--no-gpg-sign', '-m', 'init', '--date', '2026-06-01T00:00:00Z');
   return dir;
 }
 const langWindow = { since: '2025-11-01', now: '2026-11-01T00:00:00Z' };
