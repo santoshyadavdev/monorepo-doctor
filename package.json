@@ -6,6 +6,7 @@
   "homepage": "https://monorepo-skills.dev",
   "license": "MIT",
   "engines": { "node": ">=22.5" },
+  "packageManager": "pnpm@12.16.1",
   "scripts": {
     "test": "node --test scripts/*.test.mjs",
     "check": "node scripts/check-skill.mjs"

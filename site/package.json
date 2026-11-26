@@ -4,12 +4,12 @@
   "version": "0.0.1",
   "scripts": {
     "sync": "node scripts/sync-skills.mjs",
-    "dev": "npm run sync && astro dev",
-    "build": "npm run sync && astro build",
+    "dev": "pnpm run sync && astro dev",
+    "build": "pnpm run sync && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "deploy": "npm run build && wrangler deploy",
-    "preview:cf": "npm run build && wrangler dev"
+    "deploy": "pnpm run build && wrangler deploy",
+    "preview:cf": "pnpm run build && wrangler dev"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.42.6",
@@ -23,5 +23,6 @@
   },
   "engines": {
     "node": ">=24"
-  }
+  },
+  "packageManager": "pnpm@12.16.1"
 }

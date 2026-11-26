@@ -117,7 +117,7 @@ The skill must not install dependencies, build, run tests or edit project files.
 It may run:
 
 - the Node snippets in its references (Node built-ins only)
-- `npm pack --dry-run --json --ignore-scripts`
+- `npm pack --dry-run --json --ignore-scripts`, or `pnpm pack --dry-run --json` in a pnpm workspace (lifecycle scripts and pnpm version switching disabled)
 - `knip` and `publint` from your repo's `node_modules/.bin` **only** when installed there
 - `nx` / `turbo` from your repo's `node_modules/.bin` **only** when installed there, and only for graph, `--dry=json` and `boundaries` inspection — never real task execution
 

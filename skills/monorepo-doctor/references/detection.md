@@ -224,6 +224,6 @@ node "$W/detect.mjs" "<workspace-root>"
 - `orchestrators[].installed: false`: never run nx / turbo (`npx` would download a different version). Use static config analysis only, and mark dependent sub-steps `partial`.
 - `tools.knip` / `tools.publint: false`: skip that tool and mark the check `partial` with reason `${tool} not installed locally`, unless the user explicitly allowed downloads (see SKILL.md).
 - `hasNodeModules: false`: skip `knip`, `publint` and any step that needs resolved dependencies, even if downloads are allowed; mark `partial`.
-- `packages[].source === "project.json"`: an Nx project without its own package.json — package.json-based rules (missing test script, undeclared dependency, npm pack) do not apply to it.
+- `packages[].source === "project.json"`: an Nx project without its own package.json — package.json-based rules (missing test script, undeclared dependency, `npm pack` / `pnpm pack`) do not apply to it.
 - Print a one-line summary of the inventory to the user before continuing.
 - `ciFiles` contains the top-level CI files for GitHub Actions, GitLab CI, Azure Pipelines, CircleCI, Bitbucket Pipelines, Jenkins, Buildkite, and Travis. The CI coverage check follows local GitLab `include:` entries and local GitHub reusable workflows referenced from these files.
