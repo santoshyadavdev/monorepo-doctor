@@ -26,7 +26,7 @@ The companion skill [`monorepo-boundaries-cleanup`](skills/monorepo-boundaries-c
 - **Developer time** spent on internal dependency bumps, releases that exist only to move code between repos, changes coordinated across repos, and the same tooling or dependency maintenance repeated per repo.
 - **CI time** per repo, measured from GitHub Actions when `gh` is authenticated, otherwise assumed and labelled as such.
 - **Money**: a low / expected / high range at your loaded hourly rate and CI price, annualized, with every assumption printed and overridable.
-- **Migration plan**: repo coupling clusters (migrate the heaviest first, keep isolated repos separate), external dependency conflicts to align before sharing a lockfile, recommended tooling, one-time effort and payback. When the payback isn't there, it says not to migrate.
+- **Migration plan**: repo coupling clusters (migrate the heaviest first, keep isolated repos separate), external dependency conflicts to align before sharing a lockfile, recommended tooling, one-time effort and payback. It lists the reasons to migrate from [monorepo.tools](https://monorepo.tools/), but only those your history gives evidence for. It also rates every tool monorepo.tools compares out of 10, using only that site's feature matrix. Next to each rating it shows unscored signals from independent sources: State of JS satisfaction and usage, and the Thoughtworks Technology Radar. When the payback isn't there, it says not to migrate.
 
 ```text
 Use polyrepo-tax on acme/web-app, acme/admin-app, acme/ui-lib and acme/api-client for the last 12 months. Our loaded cost is $120/hour.

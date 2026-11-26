@@ -37,6 +37,15 @@ The analyzer builds a coupling graph between repos from shared internal dependen
 - **Clusters** to migrate, heaviest first, and **isolated repos** to keep separate.
 - **External dependency conflicts** (for example React 17 vs 18) to align before sharing one lockfile.
 - **Tooling** that fits the detected stack: pnpm workspaces + Nx or Turborepo for JS/TS; Gradle or Bazel for JVM; Nx or Bazel for polyglot.
+- **Why migrate**, using the polyrepo costs [monorepo.tools](https://monorepo.tools/) lists: cumbersome code sharing, code duplication, costly cross-repo changes and drifting conventions. Each reason appears only when the analysis measured evidence for it, such as internal bumps, duplicated fixes, coordinated changes or version skew.
+- **Every tool option, rated out of 10.** The report lists all nine tools on [monorepo.tools/compare](https://monorepo.tools/compare): Bazel, Gradle, Lage, Lerna, moon, Nx, Pants, Rush and Turborepo. The **monorepo.tools rating** comes from a dated snapshot of that matrix: 10 × the features marked "natively supported" ÷ 20. "Implement your own" and "community provided" marks are shown but not scored. A tool is marked as not a fit only when monorepo.tools says it lacks polyglot support and your repos contain more than JS/TS. monorepo.tools is made by Nx and accepts corrections by pull request. The report says so, and the snapshot lives in `skills/polyrepo-tax/scripts/monorepo-tools.json`.
+- **A sources list under the table** names monorepo.tools as the scored source, published by Nx, beside the independent ones.
+- **Independent signals next to each rating**, from sources that aren't tool vendors. They're shown but never scored:
+  - [State of JS 2024](https://2024.stateofjs.com/en-US/libraries/monorepo_tools/) satisfaction, with the 2021 value for trend.
+  - [State of JS 2025](https://2025.stateofjs.com/en-US/other-tools/) regular-use counts.
+  - The [Thoughtworks Technology Radar](https://www.thoughtworks.com/radar) ring.
+
+  They cover only some tools. The surveys cover Lerna, Nx, Rush and Turborepo, plus moon as a write-in. The Radar has archived blips for Nx, Turborepo and Gradle, none of them on the current edition. Tools with no coverage show a dash.
 - **One-time effort and payback**. If payback is longer than about two years or coupling is weak, the skill recommends not migrating, and points at cheaper fixes such as grouped Renovate updates, shared CI templates or contract tests.
 
 After a migration, run [monorepo-doctor](/skills/monorepo-doctor/) on the new monorepo, then [monorepo-boundaries-cleanup](/skills/monorepo-boundaries-cleanup/) to pay down what it finds.
