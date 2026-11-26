@@ -1,0 +1,47 @@
+---
+title: polyrepo-tax sample report
+description: A complete polyrepo-tax report generated from four test repositories, available as an interactive HTML page or a high-resolution image.
+---
+
+import { LinkButton } from '@astrojs/starlight/components';
+
+This is what [polyrepo-tax](/skills/polyrepo-tax/) produces. It was generated from four small test repositories with planted history: a UI library (`ui-lib`), two apps that consume it (`web-app`, `admin-app`) and an unrelated docs site (`docs-site`). The repos, commits and dollar amounts are synthetic.
+
+<div class="sample-actions">
+  <LinkButton href="/examples/polyrepo-tax-report.html" target="_blank" rel="noopener" icon="external">Open interactive report</LinkButton>
+  <LinkButton href="/examples/polyrepo-tax-report.png" download="polyrepo-tax-sample-report.png" variant="secondary" icon="download">Download image (PNG)</LinkButton>
+  <LinkButton href="/examples/polyrepo-tax-report.html" download="polyrepo-tax-sample-report.html" variant="secondary" icon="download">Download HTML</LinkButton>
+</div>
+
+<a href="/examples/polyrepo-tax-report.png" target="_blank" rel="noopener" class="sample-preview">
+  <img src="/examples/polyrepo-tax-report-preview.png" width="1280" height="900" loading="lazy" alt="Top of the polyrepo-tax sample report: an expected polyrepo tax of $4,072 per year (range $1,471 to $4,072), 41 developer hours, 225 CI minutes, 4 bugs attributable to repo boundaries, a migration payback of 23.6 months, and a bar chart of annualized cost per driver led by duplicated fixes at $1,000." />
+</a>
+
+The image is the first screen of the report at 2× resolution. Select it, or use **Download image**, for the full page (2560 × 9378 px, about 1.8 MB) with every bug expanded. The HTML file is the report exactly as the skill writes it: one self-contained page with no network requests, light and dark themes, hover details and confidence filters.
+
+## What it shows
+
+| Section | In this sample |
+|---|---|
+| Headline | $4,072 a year expected, $1,471–$4,072 depending on which bugs are counted |
+| Where the money goes | Bug costs dominate; internal bumps and releases cost $270 a year between them |
+| Bugs | 1 high confidence (a reverted `@acme/ui` 2.0 bump), 3 medium (a date-parsing fix copied into three repos, a fix two days after a bump, a fix shipped through a bump) |
+| Internal dependency churn | 4 bumps, 3 releases, a 3-day median lag from release to bump, `@acme/ui` at v1 in `admin-app` and v2 in `web-app` |
+| Migration | Migrate `ui-lib`, `web-app` and `admin-app` together; keep `docs-site` separate; align React 17 and 18 first; payback in about 23.6 months |
+
+A sample report says "migrate" only because its history was planted to. On the public [unjs](https://github.com/unjs) repos the same skill says not to; see the [walkthrough](/guides/polyrepo-to-monorepo/#5-decide).
+
+## Get one for your repositories
+
+```text
+Use polyrepo-tax on acme/web-app, acme/admin-app and acme/ui-lib for the last 12 months. Our loaded cost is $120/hour.
+```
+
+The report contains your repository names, commit subjects and SHAs, so share it like the repositories themselves. See [Build the business case for a monorepo](/guides/polyrepo-to-monorepo/) for the full walkthrough.
+
+<style>{`
+  .sample-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-block: 1.5rem; }
+  .sl-markdown-content .sample-actions > * { margin: 0; }
+  .sample-preview { display: block; }
+  .sample-preview img { display: block; width: 100%; height: auto; border: 1px solid var(--sl-color-gray-5); border-radius: 0.5rem; }
+`}</style>

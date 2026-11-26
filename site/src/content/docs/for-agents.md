@@ -45,7 +45,7 @@ It runs dependency-free Node scripts shipped with the skill:
 [`analyze.mjs`](/skills/polyrepo-tax/scripts/analyze.mjs),
 [`render-html.mjs`](/skills/polyrepo-tax/scripts/render-html.mjs) and
 [`fetch-ci.mjs`](/skills/polyrepo-tax/scripts/fetch-ci.mjs).
-A [sample HTML report](/examples/polyrepo-tax-report.html) shows the output.
+A [sample report](/sample-reports/polyrepo-tax/) shows the output, as [HTML](/examples/polyrepo-tax-report.html) or a [full-page image](/examples/polyrepo-tax-report.png).
 
 ## Installing on behalf of a user
 

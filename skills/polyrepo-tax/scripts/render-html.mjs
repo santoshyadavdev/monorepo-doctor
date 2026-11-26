@@ -115,9 +115,10 @@ export function renderHtml(r, { plan } = {}) {
       return `<tr${k === 'expected' ? ' class="row-em"' : ''}><td>${k}</td><td>${label}</td><td class="n">${fmt.full(s.cost)}</td><td class="n">${fmt.full(s.annualCost)}</td><td class="n">${fmt.full(s.annualSavings)}</td><td class="n">${pb[k] === null ? '—' : `${pb[k]} mo`}</td></tr>`;
     }).join('')}</tbody></table>`;
 
-  const confIcon = { high: '●', medium: '◐', low: '○' };
+  // Drawn with CSS: the half-filled circle glyph renders inconsistently across fonts.
+  const confIcon = { high: '<span class="dot dot-high" aria-hidden="true"></span>', medium: '<span class="dot dot-medium" aria-hidden="true"></span>', low: '<span class="dot dot-low" aria-hidden="true"></span>' };
   const bugCards = r.bugs.map((b) => `<details class="bug" data-conf="${b.confidence}">
-      <summary><span class="badge badge-${b.confidence}"><span aria-hidden="true">${confIcon[b.confidence]}</span> ${b.confidence}</span><code class="cat">${esc(b.category)}</code><span class="bug-title">${esc(b.title)}</span><span class="bug-repos">${esc([...new Set(b.repos)].join(', '))}</span></summary>
+      <summary><span class="badge badge-${b.confidence}">${confIcon[b.confidence]} ${b.confidence}</span><code class="cat">${esc(b.category)}</code><span class="bug-title">${esc(b.title)}</span><span class="bug-repos">${esc([...new Set(b.repos)].join(', '))}</span></summary>
       <p>${esc(b.why)}</p>
       <ul class="commits">${b.commits.map((c) => `<li><code>${esc(c.repo)}@${esc(c.sha)}</code> <span class="muted">${esc(c.date)}</span> ${esc(c.subject)}${c.evidenceOnly ? ' <span class="muted">(context)</span>' : ''}</li>`).join('')}</ul>
     </details>`).join('');
@@ -228,6 +229,9 @@ tfoot th { border-bottom: 0; }
 .cat { color: var(--text-2); }
 .badge { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); text-transform: capitalize; }
 .badge-high { background: var(--text); color: var(--surface); border-color: var(--text); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid currentColor; vertical-align: 0; margin-right: 2px; }
+.dot-high { background: currentColor; }
+.dot-medium { background: linear-gradient(90deg, currentColor 50%, transparent 50%); }
 .commits { margin: 6px 0 0; padding-left: 18px; font-size: 13px; overflow-wrap: anywhere; }
 .groups, .clusters { padding-left: 20px; }
 .groups li, .clusters li { margin: 8px 0; overflow-wrap: anywhere; }
