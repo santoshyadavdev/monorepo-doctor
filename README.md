@@ -193,7 +193,7 @@ test/fixtures/button.json
 
 `monorepo-doctor` is read-only. It must not install dependencies, build, run tests, or edit project files. The only allowed writes are `monorepo-doctor-report.md`, `monorepo-doctor-report.json`, and the skill work directory `$W`, where `$W` is `$(node -p 'require("os").tmpdir()')/monorepo-doctor`. The snippets require a POSIX shell (macOS, Linux, or WSL).
 
-The skill may run the Node snippets in `skills/monorepo-doctor/references`, `npm pack --dry-run --json --ignore-scripts`, and the repo's own `node_modules/.bin/knip`, `publint`, `nx` and `turbo` only when detection finds them installed. It downloads nothing at runtime by default; only if you explicitly allow downloads in your prompt may it fetch the pinned `knip@6.41.0` and `publint@0.3.25` (with install scripts disabled). Nx and Turbo commands are limited to graph, dry-run JSON, and boundaries inspection, never real task execution. Nx graph runs as `NX_DAEMON=false NX_NO_CLOUD=true NX_WORKSPACE_DATA_DIRECTORY="$W/nx-data" ./node_modules/.bin/nx graph --file="$W/nx-graph.json"` so it does not create `.nx/workspace-data` in the audited repo or start the daemon. Turbo commands use `TURBO_TELEMETRY_DISABLED=1`; `turbo --dry=json` and `turbo boundaries` should not write project files beyond Turborepo's own cache directory.
+The skill may run the Node snippets in `skills/monorepo-doctor/references`, `npm pack --dry-run --json --ignore-scripts` (or `pnpm pack --dry-run --json`, with lifecycle scripts and pnpm version switching disabled, in a pnpm workspace), and the repo's own `node_modules/.bin/knip`, `publint`, `nx` and `turbo` only when detection finds them installed. It downloads nothing at runtime by default; only if you explicitly allow downloads in your prompt may it fetch the pinned `knip@6.41.0` and `publint@0.3.25` (with install scripts disabled). Nx and Turbo commands are limited to graph, dry-run JSON, and boundaries inspection, never real task execution. Nx graph runs as `NX_DAEMON=false NX_NO_CLOUD=true NX_WORKSPACE_DATA_DIRECTORY="$W/nx-data" ./node_modules/.bin/nx graph --file="$W/nx-graph.json"` so it does not create `.nx/workspace-data` in the audited repo or start the daemon. Turbo commands use `TURBO_TELEMETRY_DISABLED=1`; `turbo --dry=json` and `turbo boundaries` should not write project files beyond Turborepo's own cache directory.
 
 Without `node_modules`, or when `knip`/`publint` aren't installed locally and downloads aren't allowed, those steps are skipped and the check is marked `partial`. `knip` and Nx load repository configuration files, which can execute config code; run the skill only on repositories you trust. Without a local Nx or Turborepo binary, the skill still performs static config analysis, but graph refreshes, Turbo dry-run hash comparisons, and `turbo boundaries` are skipped or marked `partial`.
 
@@ -307,11 +307,11 @@ dependency on test-only data. Its README lists the valid run/test targets and
 the report-verification command for
 [`fixtures/expected/bazel-java.json`](fixtures/expected/bazel-java.json).
 
-Run the tooling with Node ≥ 22.5:
+Run the tooling with Node ≥ 22.5 and pnpm (any recent pnpm switches to the version pinned in `package.json#packageManager`):
 
 ```bash
-npm test
-npm run check
+pnpm test
+pnpm run check
 ```
 
 Fixtures live under `fixtures/` and describe seeded monorepo problems for generic pnpm, Nx, Turborepo, and Bazel JS/Java workspaces. Expected findings live in `fixtures/expected/*.json`.
@@ -330,7 +330,7 @@ Expected entries accept an optional `file` (matching `location.file`) as well as
 
 Optional `checks` entries match `report.checks` by `check` and require the specified `status`. A `reasonIncludes` array requires a nonempty string reason containing every literal substring. The Turbo contract requires `ci-coverage` to be `partial` with a reason naming `unknown-comparison-base.yml` and stating `unavailable runtime comparison`, while still rejecting an invalid-base finding for that workflow.
 
-`npm run check` validates every skill's frontmatter, reference links, and (for monorepo-doctor) finding-id coverage. It should print:
+`pnpm run check` validates every skill's frontmatter, reference links, and (for monorepo-doctor) finding-id coverage. It should print:
 
 ```text
 ✓ monorepo-boundaries-cleanup is consistent
@@ -355,7 +355,7 @@ node scripts/build-polyrepo-sample.mjs --images
 The docs at [monorepo-skills.dev](https://monorepo-skills.dev) are an [Astro Starlight](https://starlight.astro.build) site in `site/`. Reference pages, `llms.txt`, and the raw `/skills/**` files are generated from `skills/`, so edit the skill files rather than generated pages.
 
 ```bash
-cd site && npm ci && npm run dev
+cd site && pnpm install --frozen-lockfile && pnpm run dev
 ```
 
 The site is deployed to Cloudflare Workers (static assets) by Workers Builds, configured in `site/wrangler.jsonc`. `.github/workflows/docs.yml` only runs a build check.

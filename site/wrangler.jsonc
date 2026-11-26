@@ -6,5 +6,7 @@
     "directory": "./dist",
     "not_found_handling": "404-page"
   },
-  "routes": [{ "pattern": "monorepo-skills.dev", "custom_domain": true }]
+  "routes": [{ "pattern": "monorepo-skills.dev", "custom_domain": true }],
+  // Required by `wrangler preview`, which Workers Builds runs for pull request previews.
+  "previews": {}
 }

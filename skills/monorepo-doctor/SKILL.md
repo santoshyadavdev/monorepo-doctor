@@ -15,7 +15,7 @@ Prerequisites: Node ≥ 22.5. The work dir is `$W` = `$(node -p 'require("os").t
 ## Rules
 
 - **Read-only.** Never install dependencies, build, run tests, or edit project files. Allowed writes: `monorepo-doctor-report.md`, `monorepo-doctor-report.json` (default `${tmpdir}/monorepo-doctor-reports`, or a user-given dir) and `$W`.
-- Allowed commands: the snippets in the reference files, `npm pack --dry-run --json --ignore-scripts`, read-only `git log`, and the repo's own `./node_modules/.bin/{knip,publint,nx,turbo}` **only if** detection reports them installed (nx/turbo: graph / `--dry=json` / `boundaries` only — never real task runs, with read-only env vars from the references).
+- Allowed commands: the snippets in the reference files, `npm pack --dry-run --json --ignore-scripts` (or, in a pnpm workspace, `pnpm pack --dry-run --json` with the env vars from [prod-leakage.md](references/prod-leakage.md)), read-only `git log`, and the repo's own `./node_modules/.bin/{knip,publint,nx,turbo}` **only if** detection reports them installed (nx/turbo: graph / `--dry=json` / `boundaries` only — never real task runs, with read-only env vars from the references).
 - **No runtime downloads by default.** Don't fetch packages (`npx`, `npm exec`, `pnpm dlx`, `yarn dlx`, `bunx`). If a tool isn't installed, skip that sub-step and mark the check `partial`. Only if the user explicitly allows downloads in this request may you run the pinned `knip@6.41.0` / `publint@0.3.25` shown in the references — never other versions, other packages, or nx/turbo.
 - **Never abort a check.** If a tool fails, mark the check `partial` or `skipped` with a reason and continue.
 - **Every finding needs evidence** (config snippet, file:line, or command output). No evidence → no finding.
