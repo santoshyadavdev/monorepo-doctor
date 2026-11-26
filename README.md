@@ -100,6 +100,8 @@ npx skills add santoshyadavdev/monorepo-doctor
 
 The CLI lets you pick which skills to install. To install one directly, add `--skill monorepo-doctor`, `--skill monorepo-boundaries-cleanup` or `--skill polyrepo-tax`.
 
+The skills are also listed on prompts.chat, where you can browse the files or download a `.skill` bundle: [Monorepo Doctor](https://prompts.chat/prompts/cmwwa5nj10001l607rfvo2qna_monorepo-doctor), [Monorepo Boundaries Cleanup](https://prompts.chat/prompts/cmwwd00670005lc07qteaxwrw_monorepo-boundaries-cleanup) and [Polyrepo Tax](https://prompts.chat/prompts/cmwxjvntb0005le071hxu4bn4_polyrepo-tax). The copies on prompts.chat are updated by hand, so this repository is the source of truth.
+
 Manual installation is also supported. Copy `skills/monorepo-doctor`, `skills/monorepo-boundaries-cleanup` and/or `skills/polyrepo-tax` (including its `scripts/` folder) into one of these locations:
 
 - `~/.claude/skills/` for Claude Code
