@@ -279,3 +279,12 @@ test('the sample report served by the docs site matches the analyzer output', as
   const { buildSample, SAMPLE } = await import('./build-polyrepo-sample.mjs');
   assert.equal(fs.readFileSync(SAMPLE, 'utf8'), buildSample(), 'stale: run node scripts/build-polyrepo-sample.mjs');
 });
+
+test('the docs site has the sample report images', async () => {
+  const { IMAGES } = await import('./build-polyrepo-sample.mjs');
+  for (const f of Object.values(IMAGES)) {
+    const head = fs.readFileSync(f).subarray(0, 24);
+    assert.equal(head.subarray(1, 4).toString(), 'PNG', `${f} is a PNG`);
+    assert.equal(head.readUInt32BE(16), 2560, `${f} is rendered at 2x (2560 px wide)`);
+  }
+});

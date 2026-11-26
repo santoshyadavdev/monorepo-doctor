@@ -78,6 +78,9 @@ tfoot th { border-bottom: 0; }
 .cat { color: var(--text-2); }
 .badge { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); text-transform: capitalize; }
 .badge-high { background: var(--text); color: var(--surface); border-color: var(--text); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid currentColor; vertical-align: 0; margin-right: 2px; }
+.dot-high { background: currentColor; }
+.dot-medium { background: linear-gradient(90deg, currentColor 50%, transparent 50%); }
 .commits { margin: 6px 0 0; padding-left: 18px; font-size: 13px; overflow-wrap: anywhere; }
 .groups, .clusters { padding-left: 20px; }
 .groups li, .clusters li { margin: 8px 0; overflow-wrap: anywhere; }
@@ -140,22 +143,22 @@ footer { margin-top: 48px; color: var(--text-2); font-size: 12px; }
 <h2>Bugs attributable to repo boundaries</h2>
 <div class="filters" role="group" aria-label="Filter by confidence">
   <button type="button" data-filter="all" aria-pressed="true">All 4</button>
-  <button type="button" data-filter="high" aria-pressed="false">● High 1</button><button type="button" data-filter="medium" aria-pressed="false">◐ Medium 3</button><button type="button" data-filter="low" aria-pressed="false">○ Low 0</button>
+  <button type="button" data-filter="high" aria-pressed="false"><span class="dot dot-high" aria-hidden="true"></span> High 1</button><button type="button" data-filter="medium" aria-pressed="false"><span class="dot dot-medium" aria-hidden="true"></span> Medium 3</button><button type="button" data-filter="low" aria-pressed="false"><span class="dot dot-low" aria-hidden="true"></span> Low 0</button>
 </div>
 <div id="bugs"><details class="bug" data-conf="high">
-      <summary><span class="badge badge-high"><span aria-hidden="true">●</span> high</span><code class="cat">dependency-regression</code><span class="bug-title">web-app rolled back @acme/ui ^2.0.0 → ^1.1.0</span><span class="bug-repos">web-app</span></summary>
+      <summary><span class="badge badge-high"><span class="dot dot-high" aria-hidden="true"></span> high</span><code class="cat">dependency-regression</code><span class="bug-title">web-app rolled back @acme/ui ^2.0.0 → ^1.1.0</span><span class="bug-repos">web-app</span></summary>
       <p>An internal release broke a consumer after it shipped. In a monorepo the producer change runs the consumer&#39;s tests before merge.</p>
       <ul class="commits"><li><code>web-app@3f66365afc</code> <span class="muted">2026-03-05</span> Revert &quot;chore: bump @acme/ui to 2.0.0&quot;</li></ul>
     </details><details class="bug" data-conf="medium">
-      <summary><span class="badge badge-medium"><span aria-hidden="true">◐</span> medium</span><code class="cat">duplicated-fix</code><span class="bug-title">fix: date parsing in timezone offsets</span><span class="bug-repos">ui-lib, web-app, admin-app</span></summary>
+      <summary><span class="badge badge-medium"><span class="dot dot-medium" aria-hidden="true"></span> medium</span><code class="cat">duplicated-fix</code><span class="bug-title">fix: date parsing in timezone offsets</span><span class="bug-repos">ui-lib, web-app, admin-app</span></summary>
       <p>The same fix was applied in 3 repos: duplicated code, or a shared contract that has to be fixed everywhere.</p>
       <ul class="commits"><li><code>ui-lib@63bbf03f8b</code> <span class="muted">2026-04-10</span> fix: date parsing in timezone offsets</li><li><code>web-app@c269396291</code> <span class="muted">2026-04-11</span> fix: date parsing in timezone offsets</li><li><code>admin-app@e993c0a699</code> <span class="muted">2026-04-12</span> fix(date): date parsing in timezone offsets</li></ul>
     </details><details class="bug" data-conf="medium">
-      <summary><span class="badge badge-medium"><span aria-hidden="true">◐</span> medium</span><code class="cat">post-bump-fix</code><span class="bug-title">fix: adapt checkout to @acme/ui Button API</span><span class="bug-repos">web-app, ui-lib</span></summary>
+      <summary><span class="badge badge-medium"><span class="dot dot-medium" aria-hidden="true"></span> medium</span><code class="cat">post-bump-fix</code><span class="bug-title">fix: adapt checkout to @acme/ui Button API</span><span class="bug-repos">web-app, ui-lib</span></summary>
       <p>Fix landed 2 days after web-app bumped @acme/ui ^1.1.0 → ^2.0.0 and names that package.</p>
       <ul class="commits"><li><code>web-app@d56547a5d4</code> <span class="muted">2026-03-10</span> chore: bump @acme/ui to 2.0.0 with Button migration <span class="muted">(context)</span></li><li><code>web-app@1938bd7e0e</code> <span class="muted">2026-03-12</span> fix: adapt checkout to @acme/ui Button API</li></ul>
     </details><details class="bug" data-conf="medium">
-      <summary><span class="badge badge-medium"><span aria-hidden="true">◐</span> medium</span><code class="cat">fix-propagation</code><span class="bug-title">fix: pick up money rounding from ui 2.1</span><span class="bug-repos">web-app, ui-lib</span></summary>
+      <summary><span class="badge badge-medium"><span class="dot dot-medium" aria-hidden="true"></span> medium</span><code class="cat">fix-propagation</code><span class="bug-title">fix: pick up money rounding from ui 2.1</span><span class="bug-repos">web-app, ui-lib</span></summary>
       <p>The fix reached web-app only after a release of @acme/ui and a version bump.</p>
       <ul class="commits"><li><code>web-app@2dcff72d1f</code> <span class="muted">2026-06-05</span> fix: pick up money rounding from ui 2.1</li></ul>
     </details></div>

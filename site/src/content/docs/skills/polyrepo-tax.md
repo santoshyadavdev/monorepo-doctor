@@ -9,7 +9,7 @@ description: A read-only skill that prices what a polyrepo setup costs — bugs 
 Use polyrepo-tax on acme/web-app, acme/admin-app, acme/ui-lib and acme/api-client for the last 12 months. Our loaded cost is $120/hour.
 ```
 
-See the [sample HTML report](/examples/polyrepo-tax-report.html), and the [walkthrough](/guides/polyrepo-to-monorepo/) from picking repos to presenting the result.
+See the [sample report](/sample-reports/polyrepo-tax/) (interactive HTML or a downloadable image), and the [walkthrough](/guides/polyrepo-to-monorepo/) from picking repos to presenting the result.
 
 ## What it measures
 

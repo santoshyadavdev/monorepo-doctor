@@ -19,7 +19,9 @@ not to migrate otherwise. It is read-only and writes HTML, Markdown and JSON.
 
 - Skill: https://monorepo-skills.dev/skills/polyrepo-tax/SKILL.md
 - Walkthrough: https://monorepo-skills.dev/guides/polyrepo-to-monorepo/
-- Sample report: https://monorepo-skills.dev/examples/polyrepo-tax-report.html
+- Sample report: https://monorepo-skills.dev/sample-reports/polyrepo-tax/
+  (HTML: https://monorepo-skills.dev/examples/polyrepo-tax-report.html,
+  image: https://monorepo-skills.dev/examples/polyrepo-tax-report.png)
 
 For the generated documentation index and complete agent documentation, see:
 

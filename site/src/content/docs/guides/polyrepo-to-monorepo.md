@@ -6,7 +6,7 @@ description: Use polyrepo-tax to measure what splitting code across repositories
 "Should we move to a monorepo?" usually gets argued from opinion. [polyrepo-tax](/skills/polyrepo-tax/) answers it from evidence: the git history of the repositories your team already works across. It is read-only, and its answer is allowed to be **no**.
 
 :::tip[See the output first]
-Open the [sample HTML report](/examples/polyrepo-tax-report.html). It was generated from four small test repos with planted history: a UI library, two apps that consume it, and an unrelated docs site.
+Open the [sample report](/sample-reports/polyrepo-tax/), interactive or as an image. It was generated from four small test repos with planted history: a UI library, two apps that consume it, and an unrelated docs site.
 :::
 
 ## 1. Pick the repositories

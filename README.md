@@ -32,7 +32,7 @@ The companion skill [`monorepo-boundaries-cleanup`](skills/monorepo-boundaries-c
 Use polyrepo-tax on acme/web-app, acme/admin-app, acme/ui-lib and acme/api-client for the last 12 months. Our loaded cost is $120/hour.
 ```
 
-It writes `polyrepo-tax-report.html` (a self-contained page to share with leadership: headline range, cost chart, filterable bugs with commit evidence, migration plan), plus Markdown and JSON. See the [sample report](https://monorepo-skills.dev/examples/polyrepo-tax-report.html) and the [walkthrough](https://monorepo-skills.dev/guides/polyrepo-to-monorepo/).
+It writes `polyrepo-tax-report.html` (a self-contained page to share with leadership: headline range, cost chart, filterable bugs with commit evidence, migration plan), plus Markdown and JSON. See the [sample report](https://monorepo-skills.dev/sample-reports/polyrepo-tax/) (interactive HTML or a downloadable image) and the [walkthrough](https://monorepo-skills.dev/guides/polyrepo-to-monorepo/).
 
 | Bug category | Confidence | Detected when |
 |---|---|---|
@@ -342,11 +342,13 @@ Optional `checks` entries match `report.checks` by `check` and require the speci
 
 [`fixtures/polyrepo/make-fixture.mjs`](fixtures/polyrepo/make-fixture.mjs) builds four small git repositories with dated history: a UI library, two apps that consume it, and an unrelated docs site. It seeds a reverted bump, a fix copied into three repos, a post-bump fix, a fix that ships through a bump, a ticket split across repos, a CI change repeated per repo, and a React 17/18 conflict. `scripts/polyrepo-tax.test.mjs` asserts what the analyzer finds in it.
 
-The docs site serves a sample report built from that fixture at [`site/public/examples/polyrepo-tax-report.html`](site/public/examples/polyrepo-tax-report.html). Regenerate it after changing the analyzer or renderer; `npm test` fails while it is stale:
+The docs site's [sample report page](https://monorepo-skills.dev/sample-reports/polyrepo-tax/) serves a report built from that fixture: [`site/public/examples/polyrepo-tax-report.html`](site/public/examples/polyrepo-tax-report.html), plus light-theme PNGs at 2× (`polyrepo-tax-report.png` for the full page, `polyrepo-tax-report-preview.png` for the first screen). Regenerate them after changing the analyzer or renderer; `npm test` fails while the HTML is stale:
 
 ```bash
-node scripts/build-polyrepo-sample.mjs
+node scripts/build-polyrepo-sample.mjs --images
 ```
+
+`--images` needs Playwright with Chromium. Image pixels depend on installed fonts, so tests check only that the images exist, not their content.
 
 ### Docs site
 
