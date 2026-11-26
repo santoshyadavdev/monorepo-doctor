@@ -352,3 +352,57 @@ test('monorepo.tools is labelled as the scored, Nx-published source, listed besi
   for (const s of ['| Tool | monorepo.tools rating /10 |', '**Sources**', '- [monorepo.tools](https://monorepo.tools/compare) (published by Nx']) assert.ok(md.includes(s), `missing ${s}`);
   assert.ok(renderHtml(report).includes('monorepo.tools rating /10'));
 });
+
+function makeRepo(name, files) {
+  const dir = path.join(root, name);
+  fs.mkdirSync(dir, { recursive: true });
+  for (const [f, body] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
+    fs.writeFileSync(path.join(dir, f), body);
+  }
+  const g = (...args) => execFileSync('git', ['-C', dir, '-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { stdio: 'ignore' });
+  g('init', '-q');
+  g('add', '.');
+  g('commit', '-q', '-m', 'init', '--date', '2026-06-01T00:00:00Z');
+  return dir;
+}
+const langWindow = { since: '2025-11-01', now: '2026-11-01T00:00:00Z' };
+const jsPkg = { 'package.json': JSON.stringify({ name: 'app', version: '1.0.0' }), 'src/index.js': 'export {};\n' };
+const noPolyglot = () => {
+  const i = MONOREPO_TOOLS.features.findIndex((f) => f.key === 'polyglot');
+  return MONOREPO_TOOLS.tools.filter((t) => t.marks[i] === 'none').map((t) => t.key).sort();
+};
+
+test('C/C++ sources count as non-JS languages for tool fit', () => {
+  const mixed = analyze({ repos: [makeRepo('js-cpp', { ...jsPkg, 'native/addon.cc': 'int x;\n', 'native/addon.h': '#pragma once\n' })], ...langWindow });
+  assert.deepEqual(mixed.migration.languages, { 'js/ts': 1, 'c/c++': 2 });
+  const notFit = mixed.migration.toolOptions.filter((t) => !t.fit).map((t) => t.key).sort();
+  assert.ok(notFit.length > 0);
+  assert.deepEqual(notFit, noPolyglot(), 'every tool without polyglot support is not a fit');
+  assert.match(mixed.migration.toolOptions.find((t) => t.key === 'turborepo').fitReason, /c\/c\+\+/);
+
+  const jsOnly = analyze({ repos: [makeRepo('js-only', { ...jsPkg, 'src/app.tsx': 'export {};\n', 'src/util.mjs': '' })], ...langWindow });
+  assert.deepEqual(jsOnly.migration.languages, { 'js/ts': 3 });
+  assert.ok(jsOnly.migration.toolOptions.every((t) => t.fit), 'JS/TS-only repos: every tool fits');
+});
+
+test('every non-JS language family makes no-polyglot tools unfit', () => {
+  const samples = {
+    jvm: ['src/Main.java', 'src/App.kt', 'build.gradle.kts', 'src/Tool.groovy'], scala: ['src/Main.scala'], clojure: ['src/core.clj'],
+    dotnet: ['src/Program.cs', 'src/Lib.fs', 'src/Legacy.vb'], 'c/c++': ['src/a.cpp'], 'objective-c': ['ios/View.m', 'ios/Bridge.mm'],
+    go: ['main.go'], rust: ['src/lib.rs'], zig: ['src/main.zig'], swift: ['ios/App.swift'], dart: ['lib/main.dart'],
+    python: ['tools/run.py', 'tools/stubs.pyi'], ruby: ['Rakefile.rb', 'tasks/build.rake'], php: ['web/index.php'], perl: ['bin/tool.pl'],
+    lua: ['scripts/init.lua'], 'elixir/erlang': ['lib/app.ex', 'src/app.erl'], haskell: ['src/Main.hs'], ocaml: ['bin/main.ml'],
+  };
+  for (const [lang, files] of Object.entries(samples)) {
+    const r = analyze({ repos: [makeRepo(`js-${lang.replace(/\W/g, '_')}`, { ...jsPkg, ...Object.fromEntries(files.map((f) => [f, 'x\n'])) })], ...langWindow });
+    assert.deepEqual(r.migration.languages, { 'js/ts': 1, [lang]: files.length }, `${lang}: detected`);
+    assert.deepEqual(r.migration.toolOptions.filter((t) => !t.fit).map((t) => t.key).sort(), noPolyglot(), `${lang}: no-polyglot tools are not a fit`);
+  }
+});
+
+test('JVM-only repos keep the Gradle recommendation', () => {
+  const r = analyze({ repos: [makeRepo('jvm-only', { 'src/Main.java': 'class Main {}\n', 'build.gradle': '' })], ...langWindow });
+  assert.deepEqual(r.migration.languages, { jvm: 2 });
+  assert.equal(r.migration.recommendedTool, 'Gradle composite build, or Bazel for very large graphs');
+});

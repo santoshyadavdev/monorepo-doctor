@@ -46,9 +46,15 @@ const GH_REF = /\b([\w.-]+\/[\w.-]+)#(\d+)\b/g;
 const TICKET_STOP = new Set(['UTF', 'ISO', 'SHA', 'RFC', 'ECMA', 'HTTP', 'ES', 'TLS', 'SSL', 'X', 'UTC', 'GMT']);
 const CONFIG_FILE = /(^|\/)(\.github\/(workflows|actions)\/|\.gitlab-ci\.yml$|\.circleci\/|Jenkinsfile$|azure-pipelines\.yml$|\.buildkite\/|\.eslintrc|eslint\.config\.|\.prettierrc|prettier\.config\.|tsconfig[\w.-]*\.json$|\.nvmrc$|\.node-version$|\.tool-versions$|renovate\.json5?$|\.github\/dependabot\.yml$|Dockerfile|\.dockerignore$|\.editorconfig$|jest\.config\.|vitest\.config\.|\.npmrc$|\.yarnrc|babel\.config\.|\.babelrc|\.husky\/|\.lintstagedrc|commitlint\.config\.|\.gitignore$|CODEOWNERS$)/;
 const GENERIC = new Set(['update readme', 'initial commit', 'wip', 'update', 'fix', 'fix typo', 'typo', 'cleanup', 'merge', 'tests', 'lint', 'format', 'update changelog', 'docs', 'fix tests', 'fix build', 'fix lint']);
+// Source languages by file extension. Anything but js/ts makes the workspace polyglot for tool fit.
 const LANG = [
-  ['js/ts', /\.(m?[jt]sx?|cjs|cts|vue|svelte)$/], ['java/kotlin', /\.(java|kts?|gradle)$/], ['go', /\.go$/],
-  ['python', /\.py$/], ['rust', /\.rs$/], ['csharp', /\.(cs|fs)$/], ['ruby', /\.rb$/], ['swift', /\.swift$/], ['php', /\.php$/],
+  ['js/ts', /\.(m?[jt]sx?|cjs|cts|vue|svelte)$/],
+  ['jvm', /\.(java|kts?|groovy|gradle)$/], ['scala', /\.(scala|sc)$/], ['clojure', /\.(clj|cljs|cljc|edn)$/],
+  ['dotnet', /\.(cs|csx|fs|fsi|fsx|vb)$/],
+  ['c/c++', /\.(c|cc|cpp|cxx|c\+\+|h|hh|hpp|hxx|h\+\+|ipp|inl)$/], ['objective-c', /\.(m|mm)$/],
+  ['go', /\.go$/], ['rust', /\.rs$/], ['zig', /\.zig$/], ['swift', /\.swift$/], ['dart', /\.dart$/],
+  ['python', /\.(py|pyi|pyx)$/], ['ruby', /\.(rb|rake)$/], ['php', /\.php$/], ['perl', /\.(pl|pm)$/], ['lua', /\.lua$/],
+  ['elixir/erlang', /\.(ex|exs|erl|hrl)$/], ['haskell', /\.(hs|lhs)$/], ['ocaml', /\.(ml|mli)$/],
 ];
 const DAY = 86_400_000;
 // Dated snapshot of the monorepo.tools/compare matrix. Ratings are computed from it alone.
@@ -593,7 +599,7 @@ export function analyze(config) {
   const tools = new Set(repos.flatMap((r) => r.inv.buildTools));
   const recommendedTool = langNames.length === 0 ? 'unknown'
     : langNames.every((l) => l === 'js/ts') ? (tools.has('nx') ? 'Nx (already used) on pnpm workspaces' : tools.has('turbo') ? 'Turborepo (already used) on pnpm workspaces' : 'pnpm workspaces + Nx or Turborepo')
-      : langNames.every((l) => l === 'java/kotlin') ? 'Gradle composite build, or Bazel for very large graphs'
+      : langNames.every((l) => l === 'jvm') ? 'Gradle composite build, or Bazel for very large graphs'
         : tools.has('bazel') ? 'Bazel (already used)' : 'Nx (polyglot plugins) or Bazel';
 
   const options = toolOptions(langNames, tools);
