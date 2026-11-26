@@ -4,8 +4,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { analyze, renderMarkdown, isFixSubject, normalizeSubject, similarity, ticketsOf, minVersion } from '../skills/polyrepo-tax/scripts/analyze.mjs';
-import { renderHtml, markdownToHtml } from '../skills/polyrepo-tax/scripts/render-html.mjs';
+import { analyze, renderMarkdown, toolOptions, whyMigrate, MONOREPO_TOOLS, isFixSubject, normalizeSubject, similarity, ticketsOf, minVersion } from '../skills/polyrepo-tax/scripts/analyze.mjs';
+import { renderHtml, markdownToHtml, independentSignals, toolSources } from '../skills/polyrepo-tax/scripts/render-html.mjs';
 import { monthRanges, completeRanges, fetchRepo } from '../skills/polyrepo-tax/scripts/fetch-ci.mjs';
 import { makeFixture } from '../fixtures/polyrepo/make-fixture.mjs';
 
@@ -129,7 +129,8 @@ test('monthRanges splits the window per calendar month', () => {
 test('html report is self-contained, escaped and embeds the plan', () => {
   const html = renderHtml(report, { plan: '## Migration plan\n\n1. **Phase 0** align `react`\n' });
   assert.match(html, /^<!doctype html>/);
-  assert.doesNotMatch(html, /<script[^>]+src=|<link[^>]+href=|https?:\/\/(?!github\.com)/, 'no external resources');
+  assert.doesNotMatch(html, /<script[^>]+src=|<link[^>]+href=|https?:\/\/(?!github\.com|monorepo\.tools|20\d\d\.stateofjs\.com|www\.thoughtworks\.com)/, 'no external resources');
+  for (const s of ['Tool options', 'Why migrate', 'monorepo.tools/compare']) assert.ok(html.includes(s), `missing ${s}`);
   for (const s of ['Polyrepo tax per year, expected', 'dependency-regression', 'data-filter="high"', 'docs-site', '<strong>Phase 0</strong>', 'prefers-color-scheme: dark']) {
     assert.ok(html.includes(s), `missing ${s}`);
   }
@@ -287,4 +288,121 @@ test('the docs site has the sample report images', async () => {
     assert.equal(head.subarray(1, 4).toString(), 'PNG', `${f} is a PNG`);
     assert.equal(head.readUInt32BE(16), 2560, `${f} is rendered at 2x (2560 px wide)`);
   }
+});
+
+test('tool options list every monorepo.tools tool, rated only from its matrix', () => {
+  const data = MONOREPO_TOOLS;
+  assert.equal(data.tools.length, 9);
+  for (const t of data.tools) {
+    assert.equal(t.marks.length, data.features.length, `${t.name} has a mark per feature`);
+    for (const mk of t.marks) assert.ok(mk in data.source.legend, `${t.name}: unknown mark ${mk}`);
+  }
+  const opts = report.migration.toolOptions;
+  assert.equal(opts.length, 9);
+  const nx = opts.find((t) => t.key === 'nx');
+  assert.equal(nx.rating, 9.5, '19 of 20 natively supported');
+  assert.equal(nx.counts.native + nx.counts.implement + nx.counts.community + nx.counts.none, 20);
+  assert.ok(opts.every((t) => t.fit), 'js/ts-only repos: every tool fits');
+  assert.ok(opts.every((t, i) => i === 0 || opts[i - 1].rating >= t.rating), 'sorted by rating');
+  const poly = toolOptions(['js/ts', 'python'], new Set(['turbo']));
+  const turbo = poly.find((t) => t.key === 'turborepo');
+  assert.equal(turbo.fit, false);
+  assert.match(turbo.fitReason, /python/);
+  assert.equal(turbo.alreadyUsed, true);
+  assert.deepEqual(poly.filter((t) => !t.fit).map((t) => t.key).sort(), ['lage', 'lerna', 'rush', 'turborepo']);
+  assert.ok(poly.findIndex((t) => !t.fit) > poly.findLastIndex((t) => t.fit), 'fitting tools first');
+});
+
+test('why-migrate reasons appear only with measured evidence', () => {
+  assert.deepEqual(report.migration.whyMigrate.map((w) => w.key), ['code-sharing', 'duplication', 'cross-repo-changes', 'conventions']);
+  assert.deepEqual(whyMigrate({ bumps: 0, releases: 0, coordinated: 0, repeatedTooling: 0, skew: 0, duplicatedFixes: 0, crossRepoFixes: 0 }), []);
+  assert.deepEqual(whyMigrate({ bumps: 2, releases: 0, coordinated: 0, repeatedTooling: 0, skew: 0, duplicatedFixes: 0, crossRepoFixes: 0 })[0].evidence, ['internal dependency bumps: 2']);
+  const md = renderMarkdown(report);
+  for (const s of ['### Why migrate', '### Tool options', '| [Nx](https://github.com/nrwl/nx) | 9.5 |']) assert.ok(md.includes(s), `missing ${s}`);
+});
+
+test('independent signals sit beside the rating and never change it', () => {
+  const opts = report.migration.toolOptions;
+  const nx = opts.find((t) => t.key === 'nx');
+  assert.equal(nx.rating, 9.5);
+  assert.equal(independentSignals(nx.independent), 'State of JS 2024 satisfaction 65% (84% in 2021) · State of JS 2025 regular use 1,682 · Thoughtworks Radar Trial (Oct 2021, archived)');
+  assert.equal(independentSignals(opts.find((t) => t.key === 'bazel').independent), null, 'no source covers Bazel: shown as a dash, not invented');
+  assert.equal(independentSignals({ stateOfJs2025: { regularUse: 23, writeIn: true } }), 'State of JS 2025 regular use 23 (write-in)');
+  for (const t of MONOREPO_TOOLS.tools) {
+    const sat = t.independent?.stateOfJs2024?.satisfaction;
+    if (sat) for (const v of Object.values(sat)) assert.ok(v >= 0 && v <= 1, `${t.name}: satisfaction is a ratio`);
+  }
+  assert.deepEqual(MONOREPO_TOOLS.independent.sources.map((x) => x.key), ['stateOfJs2024', 'stateOfJs2025', 'radar']);
+  const md = renderMarkdown(report);
+  assert.ok(md.includes('Independent signals (not scored)'));
+  assert.ok(!md.includes('..'.concat(' Covers')), 'no doubled period');
+  assert.ok(renderHtml(report).includes('Thoughtworks Technology Radar'));
+});
+
+test('monorepo.tools is labelled as the scored, Nx-published source, listed beside the independent ones', () => {
+  const list = toolSources(report.migration.toolSource, 20);
+  assert.deepEqual(list.map((x) => [x.name, x.role]), [
+    ['monorepo.tools', 'scored'],
+    ['State of JavaScript 2024', 'independent, not scored'],
+    ['State of JavaScript 2025', 'independent, not scored'],
+    ['Thoughtworks Technology Radar', 'independent, not scored'],
+  ]);
+  assert.match(list[0].publisher, /Nx/);
+  const md = renderMarkdown(report);
+  for (const s of ['| Tool | monorepo.tools rating /10 |', '**Sources**', '- [monorepo.tools](https://monorepo.tools/compare) (published by Nx']) assert.ok(md.includes(s), `missing ${s}`);
+  assert.ok(renderHtml(report).includes('monorepo.tools rating /10'));
+});
+
+function makeRepo(name, files) {
+  const dir = path.join(root, name);
+  fs.mkdirSync(dir, { recursive: true });
+  for (const [f, body] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
+    fs.writeFileSync(path.join(dir, f), body);
+  }
+  const g = (...args) => execFileSync('git', ['-C', dir, '-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { stdio: 'ignore' });
+  g('init', '-q');
+  g('add', '.');
+  g('commit', '-q', '--no-gpg-sign', '-m', 'init', '--date', '2026-06-01T00:00:00Z');
+  return dir;
+}
+const langWindow = { since: '2025-11-01', now: '2026-11-01T00:00:00Z' };
+const jsPkg = { 'package.json': JSON.stringify({ name: 'app', version: '1.0.0' }), 'src/index.js': 'export {};\n' };
+const noPolyglot = () => {
+  const i = MONOREPO_TOOLS.features.findIndex((f) => f.key === 'polyglot');
+  return MONOREPO_TOOLS.tools.filter((t) => t.marks[i] === 'none').map((t) => t.key).sort();
+};
+
+test('C/C++ sources count as non-JS languages for tool fit', () => {
+  const mixed = analyze({ repos: [makeRepo('js-cpp', { ...jsPkg, 'native/addon.cc': 'int x;\n', 'native/addon.h': '#pragma once\n' })], ...langWindow });
+  assert.deepEqual(mixed.migration.languages, { 'js/ts': 1, 'c/c++': 2 });
+  const notFit = mixed.migration.toolOptions.filter((t) => !t.fit).map((t) => t.key).sort();
+  assert.ok(notFit.length > 0);
+  assert.deepEqual(notFit, noPolyglot(), 'every tool without polyglot support is not a fit');
+  assert.match(mixed.migration.toolOptions.find((t) => t.key === 'turborepo').fitReason, /c\/c\+\+/);
+
+  const jsOnly = analyze({ repos: [makeRepo('js-only', { ...jsPkg, 'src/app.tsx': 'export {};\n', 'src/util.mjs': '' })], ...langWindow });
+  assert.deepEqual(jsOnly.migration.languages, { 'js/ts': 3 });
+  assert.ok(jsOnly.migration.toolOptions.every((t) => t.fit), 'JS/TS-only repos: every tool fits');
+});
+
+test('every non-JS language family makes no-polyglot tools unfit', () => {
+  const samples = {
+    jvm: ['src/Main.java', 'src/App.kt', 'build.gradle.kts', 'src/Tool.groovy'], scala: ['src/Main.scala'], clojure: ['src/core.clj'],
+    dotnet: ['src/Program.cs', 'src/Lib.fs', 'src/Legacy.vb'], 'c/c++': ['src/a.cpp'], 'objective-c': ['ios/View.m', 'ios/Bridge.mm'],
+    go: ['main.go'], rust: ['src/lib.rs'], zig: ['src/main.zig'], swift: ['ios/App.swift'], dart: ['lib/main.dart'],
+    python: ['tools/run.py', 'tools/stubs.pyi'], ruby: ['Rakefile.rb', 'tasks/build.rake'], php: ['web/index.php'], perl: ['bin/tool.pl'],
+    lua: ['scripts/init.lua'], 'elixir/erlang': ['lib/app.ex', 'src/app.erl'], haskell: ['src/Main.hs'], ocaml: ['bin/main.ml'],
+  };
+  for (const [lang, files] of Object.entries(samples)) {
+    const r = analyze({ repos: [makeRepo(`js-${lang.replace(/\W/g, '_')}`, { ...jsPkg, ...Object.fromEntries(files.map((f) => [f, 'x\n'])) })], ...langWindow });
+    assert.deepEqual(r.migration.languages, { 'js/ts': 1, [lang]: files.length }, `${lang}: detected`);
+    assert.deepEqual(r.migration.toolOptions.filter((t) => !t.fit).map((t) => t.key).sort(), noPolyglot(), `${lang}: no-polyglot tools are not a fit`);
+  }
+});
+
+test('JVM-only repos keep the Gradle recommendation', () => {
+  const r = analyze({ repos: [makeRepo('jvm-only', { 'src/Main.java': 'class Main {}\n', 'build.gradle': '' })], ...langWindow });
+  assert.deepEqual(r.migration.languages, { jvm: 2 });
+  assert.equal(r.migration.recommendedTool, 'Gradle composite build, or Bazel for very large graphs');
 });

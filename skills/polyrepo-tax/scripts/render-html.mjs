@@ -22,6 +22,34 @@ function moneyFormatter(currency) {
 }
 const num = (n) => Math.round(n).toLocaleString('en-US');
 
+// One line per tool from the independent sources; null when none covers it. Never feeds the rating.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const month = (ym) => { const [y, m] = ym.split('-'); return `${MONTHS[Number(m) - 1]} ${y}`; };
+export function independentSignals(ind) {
+  if (!ind) return null;
+  const parts = [];
+  const s24 = ind.stateOfJs2024;
+  if (s24) {
+    const years = Object.keys(s24.satisfaction).sort();
+    const pct = (y) => `${Math.round(s24.satisfaction[y] * 100)}%`;
+    parts.push(`State of JS 2024 satisfaction ${pct(years.at(-1))}${years.length > 1 ? ` (${pct(years[0])} in ${years[0]})` : ''}`);
+  }
+  if (ind.stateOfJs2025) parts.push(`State of JS 2025 regular use ${ind.stateOfJs2025.regularUse.toLocaleString('en-US')}${ind.stateOfJs2025.writeIn ? ' (write-in)' : ''}`);
+  if (ind.radar) parts.push(`Thoughtworks Radar ${ind.radar.ring} (${month(ind.radar.edition)}, archived)`);
+  return parts.join(' · ');
+}
+
+// Every source behind the tool options table, monorepo.tools first: the one that is scored, and who publishes it.
+export function toolSources(src, total) {
+  const list = [{
+    name: 'monorepo.tools', url: src.urls[1], publisher: 'published by Nx', retrieved: src.retrieved, role: 'scored',
+    metric: `Feature matrix. monorepo.tools rating = 10 × features marked "${src.legend.native}" ÷ ${total}; "${src.legend.implement}" and "${src.legend.community}" are counted but not scored. The page says it aims to be objective and accepts corrections by pull request`,
+    covers: 'all tools in the table; the rating and the feature columns come from it',
+  }];
+  for (const x of src.independent?.sources ?? []) list.push({ ...x, role: 'independent, not scored' });
+  return list.map((x) => ({ ...x, metric: x.metric.replace(/\.$/, ''), covers: x.covers.replace(/\.$/, '') }));
+}
+
 // Minimal, escaped Markdown for the agent-written migration plan: headings, lists, code, tables, emphasis, links.
 export function markdownToHtml(md) {
   const inline = (s) => esc(s)
@@ -137,6 +165,15 @@ export function renderHtml(r, { plan } = {}) {
   const m = r.migration;
   const clusters = m.clusters.filter((c) => c.repos.length > 1);
   const clusterList = clusters.length ? `<ol class="clusters">${clusters.map((c) => `<li><strong>${esc(c.repos.join(', '))}</strong> <span class="muted">coupling weight ${c.weight}</span></li>`).join('')}</ol>` : '<p class="muted">No coupled repos.</p>';
+  const whyHtml = m.whyMigrate?.length ? `<h3>Why migrate</h3><p class="muted">The polyrepo costs <a href="https://monorepo.tools/" rel="noopener">monorepo.tools</a> lists, shown only where this report measured them.</p>
+    <ul>${m.whyMigrate.map((w) => `<li><strong>${esc(w.polyrepo)}</strong> → ${esc(w.monorepo)}. <span class="muted">Measured: ${esc(w.evidence.join(', '))}.</span></li>`).join('')}</ul>` : '';
+  const src = m.toolSource;
+  const cats = m.toolOptions?.[0]?.categories.map((c) => c.category) ?? [];
+  const optionsHtml = m.toolOptions?.length ? `<h3>Tool options</h3>
+    <p class="muted">Every tool compared on <a href="${esc(src.urls[1])}" rel="noopener">monorepo.tools/compare</a> (snapshot ${esc(src.retrieved)}). The rating and every column up to “${esc(src.legend.none)}” come from monorepo.tools, which is published by Nx; the last column is from independent sources and is not scored.</p>
+    <div class="table-wrap"><table><thead><tr><th>Tool</th><th class="n">monorepo.tools rating /10</th>${cats.map((c) => `<th class="n">${esc(c)}</th>`).join('')}<th class="n">${esc(src.legend.implement)}</th><th class="n">${esc(src.legend.community)}</th><th class="n">${esc(src.legend.none)}</th><th>Fit</th><th>Already used</th><th>Independent signals <span class="muted">(not scored)</span></th></tr></thead><tbody>
+    ${m.toolOptions.map((t) => `<tr><td><a href="${esc(t.repo)}" rel="noopener">${esc(t.name)}</a>${t.by && t.by !== t.name ? ` <span class="muted">${esc(t.by)}</span>` : ''}</td><td class="n"><strong>${t.rating.toFixed(1)}</strong></td>${t.categories.map((c) => `<td class="n">${c.native}/${c.total}</td>`).join('')}<td class="n">${t.counts.implement}</td><td class="n">${t.counts.community}</td><td class="n">${t.counts.none}</td><td>${t.fit ? 'yes' : `no <span class="muted">(${esc(t.fitReason)})</span>`}</td><td>${t.alreadyUsed ? 'yes' : '—'}</td><td class="signals">${(independentSignals(t.independent) ?? '—').split(' · ').map(esc).join('<br>')}</td></tr>`).join('')}</tbody></table></div>
+    <h4>Sources</h4><ul class="muted">${toolSources(src, m.toolOptions[0].total).map((x) => `<li><a href="${esc(x.url)}" rel="noopener">${esc(x.name)}</a> (${esc(x.publisher)}, retrieved ${esc(x.retrieved)}; <strong>${esc(x.role)}</strong>). ${esc(x.metric)}. Covers: ${esc(x.covers)}.</li>`).join('')}</ul>` : '';
   const couplingTable = m.coupling.length ? `<table><thead><tr><th>Repo pair</th><th class="n">Internal deps</th><th class="n">Bumps</th><th class="n">Coordinated changes</th><th class="n">Bugs</th><th class="n">Weight</th><th class="n">Repeated tooling (not weighted)</th></tr></thead><tbody>
     ${m.coupling.slice(0, 30).map((c) => `<tr><td>${esc(c.repos.join(' ↔ '))}</td><td class="n">${c.dependencies}</td><td class="n">${c.bumps}</td><td class="n">${c.sharedChanges}</td><td class="n">${c.bugs}</td><td class="n">${c.weight}</td><td class="n">${c.sharedTooling ?? 0}</td></tr>`).join('')}</tbody></table>` : '';
   const conflicts = m.externalConflicts.length ? `<table><thead><tr><th>External dependency</th><th>Majors in use</th></tr></thead><tbody>
@@ -236,6 +273,7 @@ tfoot th { border-bottom: 0; }
 .groups, .clusters { padding-left: 20px; }
 .groups li, .clusters li { margin: 8px 0; overflow-wrap: anywhere; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 8px 0; }
+.signals { min-width: 240px; }
 .plan { background: var(--surface-2); border-radius: 12px; padding: 4px 20px 12px; }
 #tip { position: fixed; pointer-events: none; z-index: 10; max-width: 320px; padding: 8px 10px; border-radius: 8px; font-size: 12px; background: var(--text); color: var(--surface); box-shadow: 0 4px 16px rgb(0 0 0 / .25); opacity: 0; }
 footer { margin-top: 48px; color: var(--text-2); font-size: 12px; }
@@ -304,6 +342,8 @@ ${groupList}
 
 <h2>Migration</h2>
 <p><strong>Recommended tooling:</strong> ${esc(m.recommendedTool)} <span class="muted">(${esc(Object.entries(m.languages).map(([l, n]) => `${l} ${n} files`).join(', ') || 'no languages detected')})</span></p>
+${whyHtml}
+${optionsHtml}
 <h3>Clusters to migrate, heaviest first</h3>
 ${clusterList}
 ${m.isolated.length ? `<p><strong>Keep separate</strong> (no measured coupling): ${esc(m.isolated.join(', '))}</p>` : ''}

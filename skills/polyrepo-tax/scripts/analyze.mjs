@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderHtml } from './render-html.mjs';
+import { renderHtml, independentSignals, toolSources } from './render-html.mjs';
 
 export const DEFAULT_ASSUMPTIONS = {
   // Developer hours per event. Every value is user-overridable and printed in the report.
@@ -46,11 +46,57 @@ const GH_REF = /\b([\w.-]+\/[\w.-]+)#(\d+)\b/g;
 const TICKET_STOP = new Set(['UTF', 'ISO', 'SHA', 'RFC', 'ECMA', 'HTTP', 'ES', 'TLS', 'SSL', 'X', 'UTC', 'GMT']);
 const CONFIG_FILE = /(^|\/)(\.github\/(workflows|actions)\/|\.gitlab-ci\.yml$|\.circleci\/|Jenkinsfile$|azure-pipelines\.yml$|\.buildkite\/|\.eslintrc|eslint\.config\.|\.prettierrc|prettier\.config\.|tsconfig[\w.-]*\.json$|\.nvmrc$|\.node-version$|\.tool-versions$|renovate\.json5?$|\.github\/dependabot\.yml$|Dockerfile|\.dockerignore$|\.editorconfig$|jest\.config\.|vitest\.config\.|\.npmrc$|\.yarnrc|babel\.config\.|\.babelrc|\.husky\/|\.lintstagedrc|commitlint\.config\.|\.gitignore$|CODEOWNERS$)/;
 const GENERIC = new Set(['update readme', 'initial commit', 'wip', 'update', 'fix', 'fix typo', 'typo', 'cleanup', 'merge', 'tests', 'lint', 'format', 'update changelog', 'docs', 'fix tests', 'fix build', 'fix lint']);
+// Source languages by file extension. Anything but js/ts makes the workspace polyglot for tool fit.
 const LANG = [
-  ['js/ts', /\.(m?[jt]sx?|cjs|cts|vue|svelte)$/], ['java/kotlin', /\.(java|kts?|gradle)$/], ['go', /\.go$/],
-  ['python', /\.py$/], ['rust', /\.rs$/], ['csharp', /\.(cs|fs)$/], ['ruby', /\.rb$/], ['swift', /\.swift$/], ['php', /\.php$/],
+  ['js/ts', /\.(m?[jt]sx?|cjs|cts|vue|svelte)$/],
+  ['jvm', /\.(java|kts?|groovy|gradle)$/], ['scala', /\.(scala|sc)$/], ['clojure', /\.(clj|cljs|cljc|edn)$/],
+  ['dotnet', /\.(cs|csx|fs|fsi|fsx|vb)$/],
+  ['c/c++', /\.(c|cc|cpp|cxx|c\+\+|h|hh|hpp|hxx|h\+\+|ipp|inl)$/], ['objective-c', /\.(m|mm)$/],
+  ['go', /\.go$/], ['rust', /\.rs$/], ['zig', /\.zig$/], ['swift', /\.swift$/], ['dart', /\.dart$/],
+  ['python', /\.(py|pyi|pyx)$/], ['ruby', /\.(rb|rake)$/], ['php', /\.php$/], ['perl', /\.(pl|pm)$/], ['lua', /\.lua$/],
+  ['elixir/erlang', /\.(ex|exs|erl|hrl)$/], ['haskell', /\.(hs|lhs)$/], ['ocaml', /\.(ml|mli)$/],
 ];
 const DAY = 86_400_000;
+// Dated snapshot of the monorepo.tools/compare matrix. Ratings are computed from it alone.
+export const MONOREPO_TOOLS = JSON.parse(fs.readFileSync(new URL('./monorepo-tools.json', import.meta.url), 'utf8'));
+
+// Every tool on monorepo.tools, rated 0–10 by the share of compared features the page marks "natively supported".
+// Partial marks ("implement your own", "community provided") are counted, not scored. A tool the page marks
+// "not supported" for polyglot is not a fit when the repos contain more than JS/TS. Nothing else is inferred.
+export function toolOptions(langNames, buildTools, data = MONOREPO_TOOLS) {
+  const polyglotIdx = data.features.findIndex((f) => f.key === 'polyglot');
+  const otherLangs = langNames.filter((l) => l !== 'js/ts');
+  const count = (marks) => Object.fromEntries(Object.keys(data.source.legend).map((k) => [k, marks.filter((m) => m === k).length]));
+  return data.tools.map((t) => {
+    const counts = count(t.marks);
+    const categories = data.categories.map((c) => {
+      const marks = t.marks.filter((_, i) => data.features[i].category === c);
+      return { category: c, native: marks.filter((m) => m === 'native').length, total: marks.length };
+    });
+    const fit = !(otherLangs.length && t.marks[polyglotIdx] === 'none');
+    return {
+      key: t.key, name: t.name, by: t.by, description: t.description, repo: t.repo,
+      rating: Math.round((counts.native / t.marks.length) * 100) / 10,
+      counts, total: t.marks.length, categories,
+      gaps: data.features.filter((_, i) => t.marks[i] === 'none').map((f) => f.label),
+      fit, fitReason: fit ? null : `monorepo.tools marks polyglot support "${data.source.legend.none}"; the repos also contain ${otherLangs.join(', ')}`,
+      alreadyUsed: buildTools.has(t.detect),
+      independent: t.independent ?? null,
+    };
+  }).sort((x, y) => (y.fit - x.fit) || (y.rating - x.rating) || x.name.localeCompare(y.name));
+}
+
+// The polyrepo costs monorepo.tools lists, kept only where this report measured evidence for them.
+export function whyMigrate(ev, data = MONOREPO_TOOLS) {
+  const evidence = {
+    'code-sharing': [[ev.bumps, 'internal dependency bumps'], [ev.releases, 'internal releases consumed by sibling repos']],
+    duplication: [[ev.duplicatedFixes, 'duplicated-fix bugs']],
+    'cross-repo-changes': [[ev.coordinated, 'coordinated cross-repo changes'], [ev.crossRepoFixes, 'cross-repo-fix bugs']],
+    conventions: [[ev.repeatedTooling, 'repeated tooling/dependency changes'], [ev.skew, 'internal packages with version skew today']],
+  };
+  return data.reasons.map((r) => ({ ...r, evidence: evidence[r.key].filter(([n]) => n > 0).map(([n, what]) => `${what}: ${n}`) }))
+    .filter((r) => r.evidence.length);
+}
 
 const git = (repo, args) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'pipe'] });
 // For lookups that may legitimately miss (a file at a revision, a repo probe). History collection uses
@@ -135,6 +181,8 @@ function inventory(repo) {
     (has('MODULE.bazel') || has('WORKSPACE') || has('WORKSPACE.bazel')) && 'bazel',
     (has('build.gradle') || has('build.gradle.kts') || has('settings.gradle') || has('settings.gradle.kts')) && 'gradle', has('pom.xml') && 'maven',
     has('go.mod') && 'go', has('Cargo.toml') && 'cargo',
+    files.some((f) => /^lage\.config\.[cm]?js$/.test(f)) && 'lage', files.some((f) => /^\.moon\/workspace\.ya?ml$/.test(f)) && 'moon',
+    has('pants.toml') && 'pants', has('rush.json') && 'rush',
   ].filter(Boolean);
   const ci = files.filter((f) => /^\.github\/workflows\/.+\.ya?ml$|^\.gitlab-ci\.yml$|^\.circleci\/config\.yml$|^Jenkinsfile$|^azure-pipelines\.yml$/.test(f));
   const nodeVersion = has('.nvmrc') ? tryGit(repo, ['show', 'HEAD:.nvmrc']).trim() : null;
@@ -551,8 +599,15 @@ export function analyze(config) {
   const tools = new Set(repos.flatMap((r) => r.inv.buildTools));
   const recommendedTool = langNames.length === 0 ? 'unknown'
     : langNames.every((l) => l === 'js/ts') ? (tools.has('nx') ? 'Nx (already used) on pnpm workspaces' : tools.has('turbo') ? 'Turborepo (already used) on pnpm workspaces' : 'pnpm workspaces + Nx or Turborepo')
-      : langNames.every((l) => l === 'java/kotlin') ? 'Gradle composite build, or Bazel for very large graphs'
+      : langNames.every((l) => l === 'jvm') ? 'Gradle composite build, or Bazel for very large graphs'
         : tools.has('bazel') ? 'Bazel (already used)' : 'Nx (polyglot plugins) or Bazel';
+
+  const options = toolOptions(langNames, tools);
+  const reasons = whyMigrate({
+    bumps: uniqueBumps.length, releases: releaseEvents.length, coordinated: coordinated.length, repeatedTooling: duplicatedTooling.length,
+    skew: skew.length, duplicatedFixes: bugs.filter((b) => b.category === 'duplicated-fix').length,
+    crossRepoFixes: bugs.filter((b) => b.category === 'cross-repo-fix').length,
+  });
 
   const migrationDays = migrateRepos.length * a.migrationDaysPerRepo + conflicts.length * a.migrationDaysPerConflict;
   const migrationCost = Math.round(migrationDays * 8 * rates.developerHourly);
@@ -582,11 +637,29 @@ export function analyze(config) {
     coordinated, duplicatedTooling,
     cost: scenarios,
     migration: {
-      recommendedTool, languages: langs, clusters, isolated, coupling: edgeList.filter((e) => e.weight > 0), externalConflicts: conflicts,
+      recommendedTool, languages: langs,
+      toolOptions: options, whyMigrate: reasons,
+      toolSource: { urls: MONOREPO_TOOLS.source.urls, retrieved: MONOREPO_TOOLS.source.retrieved, publisher: MONOREPO_TOOLS.source.publisher, legend: MONOREPO_TOOLS.source.legend, independent: MONOREPO_TOOLS.independent },
+      clusters, isolated, coupling: edgeList.filter((e) => e.weight > 0), externalConflicts: conflicts,
       oneTime: { days: round(migrationDays), cost: migrationCost, repos: migrateRepos.map((r) => r.name) },
       paybackMonths: { low: payback(scenarios.low), expected: payback(scenarios.expected), high: payback(scenarios.high) },
     },
   };
+}
+
+export function toolOptionsMarkdown(m) {
+  const src = m.toolSource;
+  const cats = m.toolOptions[0].categories.map((c) => c.category);
+  const out = ['### Tool options', '',
+    `Every tool compared on [monorepo.tools/compare](${src.urls[1]}) (snapshot ${src.retrieved}). The rating and every column up to "${src.legend.none}" come from monorepo.tools, which is published by Nx; the last column is from independent sources and is not scored.`, '',
+    `| Tool | monorepo.tools rating /10 | ${cats.join(' | ')} | ${src.legend.implement} | ${src.legend.community} | ${src.legend.none} | Fit | Already used | Independent signals (not scored) |`,
+    `|---|---:|${cats.map(() => '---:').join('|')}|---:|---:|---:|---|---|---|`];
+  for (const t of m.toolOptions) {
+    out.push(`| [${t.name}](${t.repo}) | ${t.rating.toFixed(1)} | ${t.categories.map((c) => `${c.native}/${c.total}`).join(' | ')} | ${t.counts.implement} | ${t.counts.community} | ${t.counts.none} | ${t.fit ? 'yes' : `no: ${t.fitReason}`} | ${t.alreadyUsed ? 'yes' : '—'} | ${independentSignals(t.independent) ?? '—'} |`);
+  }
+  out.push('', '**Sources**', '');
+  for (const x of toolSources(src, m.toolOptions[0].total)) out.push(`- [${x.name}](${x.url}) (${x.publisher}, retrieved ${x.retrieved}; **${x.role}**). ${x.metric}. Covers: ${x.covers}.`);
+  return out;
 }
 
 function median(xs) {
@@ -670,6 +743,12 @@ export function renderMarkdown(r) {
   const m = r.migration;
   md.push('## Migration plan inputs', '');
   md.push(`**Recommended tooling:** ${m.recommendedTool} (languages by file count: ${Object.entries(m.languages).map(([l, n]) => `${l} ${n}`).join(', ') || 'none detected'})`, '');
+  if (m.whyMigrate?.length) {
+    md.push('### Why migrate', '', 'The polyrepo costs [monorepo.tools](https://monorepo.tools/) lists, shown only where this report measured them:', '');
+    for (const w of m.whyMigrate) md.push(`- **${w.polyrepo}** → ${w.monorepo}. Measured: ${w.evidence.join(', ')}.`);
+    md.push('');
+  }
+  if (m.toolOptions?.length) md.push(...toolOptionsMarkdown(m), '');
   md.push('**Clusters** (repos that change together; migrate the heaviest first):', '');
   m.clusters.filter((c) => c.repos.length > 1).forEach((c, i) => md.push(`${i + 1}. ${c.repos.join(', ')} — coupling weight ${c.weight}`));
   if (m.isolated.length) md.push('', `**No measured coupling — keep separate unless there is another reason:** ${m.isolated.join(', ')}`);
